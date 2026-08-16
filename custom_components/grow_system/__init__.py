@@ -69,14 +69,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = GrowSystemStore(hass)
     await store.async_load()
     hass.data[DOMAIN]["store"] = store
-    hass.data[DOMAIN]["entities"] = _resolve_entities(
-        hass, {**entry.data, **entry.options}
-    )
+    configured = {**entry.data, **entry.options}
+    hass.data[DOMAIN]["entry"] = entry
+    hass.data[DOMAIN]["configured_entities"] = configured
+    hass.data[DOMAIN]["entities"] = _resolve_entities(hass, configured)
 
     async def _async_options_updated(hass: HomeAssistant, updated: ConfigEntry) -> None:
-        hass.data[DOMAIN]["entities"] = _resolve_entities(
-            hass, {**updated.data, **updated.options}
-        )
+        configured = {**updated.data, **updated.options}
+        hass.data[DOMAIN]["configured_entities"] = configured
+        hass.data[DOMAIN]["entities"] = _resolve_entities(hass, configured)
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
@@ -101,5 +102,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload the integration."""
     frontend.async_remove_panel(hass, PANEL_PATH)
     hass.data[DOMAIN].pop("store", None)
+    hass.data[DOMAIN].pop("entry", None)
+    hass.data[DOMAIN].pop("configured_entities", None)
     hass.data[DOMAIN].pop("entities", None)
     return True
