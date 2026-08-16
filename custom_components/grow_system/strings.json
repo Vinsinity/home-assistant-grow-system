@@ -1,0 +1,14 @@
+{
+  "title": "Grow System Extension",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grow System Extension",
+        "description": "Create the profile store and management API. The control engine remains disabled until explicitly enabled."
+      }
+    },
+    "abort": {
+      "already_configured": "Grow System Extension is already configured."
+    }
+  }
+}

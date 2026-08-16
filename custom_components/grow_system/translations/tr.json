@@ -1,0 +1,14 @@
+{
+  "title": "Grow System Extension",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grow System Extension",
+        "description": "Profil deposunu ve yönetim API'sini oluşturur. Kontrol motoru siz açıkça etkinleştirene kadar kapalı kalır."
+      }
+    },
+    "abort": {
+      "already_configured": "Grow System Extension zaten yapılandırılmış."
+    }
+  }
+}
