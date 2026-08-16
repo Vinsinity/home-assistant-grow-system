@@ -19,12 +19,19 @@ async def websocket_get_config(hass, connection, msg) -> None:
     configured = hass.data[DOMAIN].get("configured_entities", {})
     entities = resolve_entities(hass, configured)
     hass.data[DOMAIN]["entities"] = entities
+    atlas = hass.data[DOMAIN].get("atlas_i2c")
     connection.send_result(
         msg["id"],
         {
             **store.data,
             "entities": entities,
             "configured_entities": configured,
+            "hardware": {
+                "atlas_i2c": atlas.diagnostic if atlas is not None else {
+                    "available": False,
+                    "error": "Native I2C coordinator is not initialized",
+                }
+            },
         },
     )
 

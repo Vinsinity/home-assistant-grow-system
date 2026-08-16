@@ -1,0 +1,155 @@
+"""Small, testable Atlas Scientific EZO I2C driver.
+
+Only read-only commands are used here. Pump/motor control deliberately lives outside
+this module so discovering probes can never actuate equipment.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+import time
+from typing import Callable, Protocol
+
+
+DEFAULT_ADDRESSES = {
+    0x61: "DO",
+    0x63: "pH",
+    0x64: "EC",
+    0x66: "RTD",
+}
+
+STATUS_SUCCESS = 1
+STATUS_SYNTAX_ERROR = 2
+STATUS_NOT_READY = 254
+STATUS_NO_DATA = 255
+
+
+class AtlasProtocolError(RuntimeError):
+    """An EZO circuit returned an invalid or unsuccessful response."""
+
+
+class AtlasTransport(Protocol):
+    """Transport boundary used by real I2C and unit tests."""
+
+    def write(self, address: int, payload: bytes) -> None: ...
+
+    def read(self, address: int, length: int) -> bytes: ...
+
+    def close(self) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class AtlasDevice:
+    """A discovered EZO circuit."""
+
+    address: int
+    device_type: str
+    firmware: str | None = None
+
+    @property
+    def key(self) -> str:
+        return f"{self.device_type.lower()}_{self.address:02x}"
+
+
+class SmbusTransport:
+    """Linux I2C transport backed by smbus2."""
+
+    def __init__(self, bus_number: int) -> None:
+        from smbus2 import SMBus, i2c_msg  # Imported only on supported hosts.
+
+        self._bus = SMBus(bus_number)
+        self._message = i2c_msg
+
+    def write(self, address: int, payload: bytes) -> None:
+        self._bus.i2c_rdwr(self._message.write(address, payload))
+
+    def read(self, address: int, length: int) -> bytes:
+        message = self._message.read(address, length)
+        self._bus.i2c_rdwr(message)
+        return bytes(message)
+
+    def close(self) -> None:
+        self._bus.close()
+
+
+class AtlasEzoBus:
+    """Discover and poll Atlas EZO circuits on one I2C bus."""
+
+    def __init__(
+        self,
+        bus_number: int = 1,
+        *,
+        transport: AtlasTransport | None = None,
+        sleep: Callable[[float], None] = time.sleep,
+    ) -> None:
+        self._transport = transport or SmbusTransport(bus_number)
+        self._sleep = sleep
+
+    def close(self) -> None:
+        self._transport.close()
+
+    def command(
+        self,
+        address: int,
+        command: str,
+        *,
+        processing_time: float = 0.9,
+        response_length: int = 32,
+    ) -> str:
+        """Send one ASCII EZO command and return its ASCII response."""
+        self._transport.write(address, command.encode("ascii"))
+        self._sleep(processing_time)
+
+        for attempt in range(4):
+            raw = self._transport.read(address, response_length)
+            if not raw:
+                raise AtlasProtocolError(f"0x{address:02x}: empty response")
+            status = raw[0]
+            if status == STATUS_NOT_READY:
+                if attempt == 3:
+                    raise AtlasProtocolError(f"0x{address:02x}: response timed out")
+                self._sleep(0.3)
+                continue
+            if status == STATUS_SYNTAX_ERROR:
+                raise AtlasProtocolError(f"0x{address:02x}: command syntax error")
+            if status == STATUS_NO_DATA:
+                raise AtlasProtocolError(f"0x{address:02x}: no response data")
+            if status != STATUS_SUCCESS:
+                raise AtlasProtocolError(
+                    f"0x{address:02x}: unknown response status {status}"
+                )
+            return raw[1:].split(b"\x00", 1)[0].decode("ascii").strip()
+
+        raise AtlasProtocolError(f"0x{address:02x}: response timed out")
+
+    def identify(self, address: int) -> AtlasDevice:
+        """Identify a circuit using the read-only information command."""
+        response = self.command(address, "i", processing_time=0.3)
+        fields = [field.strip() for field in response.lstrip("?").split(",")]
+        if len(fields) < 2 or fields[0].upper() != "I":
+            raise AtlasProtocolError(f"0x{address:02x}: invalid identity {response!r}")
+        return AtlasDevice(
+            address=address,
+            device_type=fields[1],
+            firmware=fields[2] if len(fields) > 2 else None,
+        )
+
+    def discover(self) -> list[AtlasDevice]:
+        """Probe only documented sensor addresses; never scan arbitrary HATs."""
+        devices: list[AtlasDevice] = []
+        for address in DEFAULT_ADDRESSES:
+            try:
+                devices.append(self.identify(address))
+            except (AtlasProtocolError, OSError):
+                continue
+        return devices
+
+    def read_measurement(self, device: AtlasDevice) -> tuple[float, ...]:
+        """Read the circuit and parse all numeric response fields."""
+        response = self.command(device.address, "R")
+        try:
+            return tuple(float(value.strip()) for value in response.split(","))
+        except ValueError as err:
+            raise AtlasProtocolError(
+                f"0x{device.address:02x}: invalid measurement {response!r}"
+            ) from err
