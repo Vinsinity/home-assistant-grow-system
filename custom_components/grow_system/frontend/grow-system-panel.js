@@ -13,7 +13,7 @@ class GrowSystemPanel extends HTMLElement {
   set hass(value) {
     this._hass = value;
     if (!this._config) this._load();
-    else this._render();
+    else this._updateLiveValues();
   }
 
   set narrow(value) {
@@ -23,9 +23,7 @@ class GrowSystemPanel extends HTMLElement {
   set route(value) { this._route = value; }
   set panel(value) { this._panel = value; }
 
-  connectedCallback() {
-    this._render();
-  }
+  connectedCallback() { this._render(); }
 
   async _load() {
     if (!this._hass || this._loading) return;
@@ -37,7 +35,7 @@ class GrowSystemPanel extends HTMLElement {
       this._editingStage = this._config.active_stage;
       this._draft = { ...this._config.profiles[this._editingStage] };
     } catch (error) {
-      this._notice = `Profile data could not be loaded: ${error.message || error}`;
+      this._notice = `Profil verileri yüklenemedi: ${error.message || error}`;
     } finally {
       this._loading = false;
       this._render();
@@ -67,17 +65,17 @@ class GrowSystemPanel extends HTMLElement {
   }
 
   _changeField(event) {
-    const field = event.target.dataset.field;
-    this._draft[field] = Number(event.target.value);
-    this._notice = "Unsaved changes";
-    this._renderStatusOnly();
+    const field = event.currentTarget.dataset.field;
+    this._draft[field] = Number(event.currentTarget.value);
+    this._notice = "Kaydedilmemiş değişiklikler var";
+    this._updateNotice();
   }
 
   async _save() {
     if (!this._hass || this._saving) return;
     this._saving = true;
-    this._notice = "Saving…";
-    this._renderStatusOnly();
+    this._notice = "Kaydediliyor…";
+    this._updateNotice();
     try {
       const saved = await this._hass.connection.sendMessagePromise({
         type: "grow_system/profile/save",
@@ -86,153 +84,177 @@ class GrowSystemPanel extends HTMLElement {
       });
       this._config.profiles[this._editingStage] = saved;
       this._draft = { ...saved };
-      this._notice = "Profile saved";
+      this._notice = "Profil kaydedildi";
     } catch (error) {
-      this._notice = `Save failed: ${error.message || error}`;
+      this._notice = `Kaydedilemedi: ${error.message || error}`;
     } finally {
       this._saving = false;
-      this._renderStatusOnly();
+      this._updateNotice();
     }
   }
 
   async _activate() {
     if (!this._hass || this._editingStage === this._config.active_stage) return;
-    const confirmed = window.confirm(
-      `Select ${this._draft.name} as the active stage? The control engine is not enabled yet.`
-    );
-    if (!confirmed) return;
+    const name = this._draft.name;
+    if (!window.confirm(`${name} aktif yetiştirme aşaması olarak seçilsin mi? Otomatik kontrol motoru kapalı kalacak.`)) return;
     await this._hass.connection.sendMessagePromise({
       type: "grow_system/stage/select",
       stage: this._editingStage,
     });
     this._config.active_stage = this._editingStage;
-    this._notice = "Active stage updated";
+    this._notice = `${name} aktif aşama olarak seçildi`;
     this._render();
   }
 
-  _renderStatusOnly() {
+  _updateNotice() {
     const status = this.shadowRoot?.querySelector("[data-status]");
     if (status) status.textContent = this._notice;
   }
 
   _field(label, key, unit, min, max, step) {
-    const value = this._draft?.[key] ?? "";
     return `
-      <label class="field">
-        <span>${label}</span>
-        <div class="input-shell">
-          <input data-field="${key}" type="number" value="${value}"
-            min="${min}" max="${max}" step="${step}" />
-          <b>${unit}</b>
-        </div>
-      </label>`;
+      <ha-textfield
+        data-field="${key}"
+        label="${label}"
+        type="number"
+        value="${this._draft?.[key] ?? ""}"
+        min="${min}"
+        max="${max}"
+        step="${step}"
+        suffix="${unit}">
+      </ha-textfield>`;
   }
 
-  _liveMetric(label, entity, target, unit) {
+  _metric(label, icon, entity, target, unit, precision = 1) {
     const raw = this._reading(entity);
-    const targetValue = Number(target);
     const valid = Number.isFinite(raw);
-    const delta = valid ? raw - targetValue : null;
-    const tone = !valid ? "muted" : Math.abs(delta) < 0.6 ? "good" : "watch";
+    const delta = valid ? raw - Number(target) : null;
     return `
-      <div class="readout ${tone}">
-        <span>${label}</span>
-        <strong>${valid ? raw.toFixed(label === "pH" ? 2 : 1) : "—"}<small>${unit}</small></strong>
-        <em>${valid ? `${delta >= 0 ? "+" : ""}${delta.toFixed(1)} from target` : "No reading"}</em>
+      <div class="metric" data-metric data-entity='${JSON.stringify(entity || [])}' data-target="${target}" data-unit="${unit}" data-precision="${precision}">
+        <ha-icon icon="${icon}"></ha-icon>
+        <div class="metric-name"><span>${label}</span><small>Hedef ${target} ${unit}</small></div>
+        <div class="metric-value">
+          <strong>${valid ? raw.toFixed(precision) : "—"}</strong><span>${valid ? unit : "Veri yok"}</span>
+          <small>${valid ? `${delta >= 0 ? "+" : ""}${delta.toFixed(precision)} fark` : "Sensör eşleştirilmedi"}</small>
+        </div>
       </div>`;
+  }
+
+  _updateLiveValues() {
+    if (!this._config || !this.shadowRoot) return;
+    this.shadowRoot.querySelectorAll("[data-metric]").forEach((row) => {
+      let entity;
+      try { entity = JSON.parse(row.dataset.entity); } catch { entity = []; }
+      const raw = this._reading(entity);
+      const precision = Number(row.dataset.precision);
+      const target = Number(row.dataset.target);
+      const unit = row.dataset.unit;
+      const value = row.querySelector(".metric-value");
+      if (!value) return;
+      value.innerHTML = Number.isFinite(raw)
+        ? `<strong>${raw.toFixed(precision)}</strong><span>${unit}</span><small>${raw - target >= 0 ? "+" : ""}${(raw - target).toFixed(precision)} fark</small>`
+        : `<strong>—</strong><span>Veri yok</span><small>Sensör eşleştirilmedi</small>`;
+    });
   }
 
   _render() {
     if (!this.shadowRoot) return;
     if (!this._config || !this._draft) {
-      this.shadowRoot.innerHTML = `<style>${GrowSystemPanel.styles}</style><main class="loading">Loading Grow System…</main>`;
+      this.shadowRoot.innerHTML = `
+        <style>${GrowSystemPanel.styles}</style>
+        <div class="loading"><ha-circular-progress active></ha-circular-progress><span>Grow System yükleniyor…</span></div>`;
       return;
     }
 
     const order = ["germination", "early_veg", "veg", "bloom", "darkness"];
+    const labels = {germination: "Çimlenme", early_veg: "Erken veg", veg: "Veg", bloom: "Çiçeklenme", darkness: "Karanlık"};
+    const icons = {germination: "mdi:sprout", early_veg: "mdi:leaf", veg: "mdi:flower", bloom: "mdi:flower-pollen", darkness: "mdi:weather-night"};
     const active = this._config.active_stage;
     const entities = this._config.entities || {};
-    const stageRail = order.map((stage, index) => {
+
+    const stages = order.map((stage) => {
       const profile = this._config.profiles[stage];
-      const state = stage === active ? "active" : stage === this._editingStage ? "editing" : "";
-      return `<button class="stage ${state}" data-stage="${stage}">
-        <i>${String(index + 1).padStart(2, "0")}</i>
-        <span>${profile.name}</span>
-        <b>${profile.photoperiod}/${24 - profile.photoperiod}</b>
-      </button>`;
+      return `
+        <button class="stage ${stage === this._editingStage ? "selected" : ""}" data-stage="${stage}">
+          <ha-icon icon="${icons[stage]}"></ha-icon>
+          <span>${labels[stage]}</span>
+          <small>${profile.photoperiod}/${24 - profile.photoperiod}</small>
+          ${stage === active ? '<b>Aktif</b>' : ""}
+        </button>`;
     }).join("");
 
     this.shadowRoot.innerHTML = `
       <style>${GrowSystemPanel.styles}</style>
       <main>
-        <header>
+        <div class="page-heading">
           <div>
-            <p class="eyebrow">Grow System Extension / Profile console</p>
-            <h1>${this._draft.name}</h1>
+            <h1>Grow System</h1>
+            <p>Yetiştirme profilleri ve canlı hedefler</p>
           </div>
-          <div class="system-state">
-            <span>ACTIVE STAGE</span>
-            <strong>${this._config.profiles[active].name}</strong>
+          <div class="engine-status">
+            <ha-icon icon="mdi:shield-check-outline"></ha-icon>
+            <span><strong>Otomatik kontrol kapalı</strong><small>Ekipmanlara komut gönderilmiyor</small></span>
           </div>
-        </header>
+        </div>
 
-        <nav class="stage-rail" aria-label="Growth stages">${stageRail}</nav>
+        <ha-card header="Yetiştirme aşaması" class="stage-card">
+          <div class="card-content stage-grid">${stages}</div>
+        </ha-card>
 
-        <section class="workspace">
-          <div class="editor">
-            <div class="section-head">
-              <div><span>01</span><h2>Canopy</h2></div>
-              <p>Photoperiod and the climate around the plant.</p>
-            </div>
-            <div class="field-grid">
-              ${this._field("Light on", "photoperiod", "h", 0, 24, 1)}
-              ${this._field("Intensity", "light_intensity", "%", 0, 100, 5)}
-              ${this._field("Day temperature", "day_temperature", "°C", 10, 35, 0.5)}
-              ${this._field("Night temperature", "night_temperature", "°C", 10, 35, 0.5)}
-            </div>
+        <div class="layout">
+          <section class="profile-column">
+            <ha-card header="${labels[this._editingStage]} profili">
+              <div class="card-content">
+                <h2><ha-icon icon="mdi:white-balance-sunny"></ha-icon>Işık ve iklim</h2>
+                <div class="fields">
+                  ${this._field("Aydınlık süre", "photoperiod", "saat", 0, 24, 1)}
+                  ${this._field("Işık şiddeti", "light_intensity", "%", 0, 100, 5)}
+                  ${this._field("Gündüz sıcaklığı", "day_temperature", "°C", 10, 35, 0.5)}
+                  ${this._field("Gece sıcaklığı", "night_temperature", "°C", 10, 35, 0.5)}
+                </div>
 
-            <div class="section-head">
-              <div><span>02</span><h2>Atmosphere</h2></div>
-              <p>One climate target, with VPD as the cross-check.</p>
-            </div>
-            <div class="field-grid">
-              ${this._field("Humidity", "humidity", "%", 30, 90, 1)}
-              ${this._field("VPD", "vpd", "kPa", 0.2, 2.5, 0.05)}
-              ${this._field("CO₂", "co2", "ppm", 350, 1500, 25)}
-            </div>
+                <div class="divider"></div>
+                <h2><ha-icon icon="mdi:greenhouse"></ha-icon>Kabin atmosferi</h2>
+                <div class="fields three">
+                  ${this._field("Bağıl nem", "humidity", "%", 30, 90, 1)}
+                  ${this._field("VPD", "vpd", "kPa", 0.2, 2.5, 0.05)}
+                  ${this._field("CO₂", "co2", "ppm", 350, 1500, 25)}
+                </div>
 
-            <div class="section-head">
-              <div><span>03</span><h2>Root zone</h2></div>
-              <p>Targets remain monitor-only until each actuator is attached.</p>
-            </div>
-            <div class="field-grid">
-              ${this._field("Nutrient strength", "ppm", "ppm", 0, 2000, 10)}
-              ${this._field("Water temperature", "water_temperature", "°C", 10, 30, 0.5)}
-              ${this._field("pH", "ph", "pH", 4, 8, 0.1)}
-              ${this._field("Minimum DO", "do_minimum", "mg/L", 0, 15, 0.1)}
-            </div>
-
-            <footer>
-              <span data-status>${this._notice}</span>
-              <div>
-                <button class="secondary" data-activate ${this._editingStage === active ? "disabled" : ""}>Set active</button>
-                <button class="primary" data-save ${this._saving ? "disabled" : ""}>Save profile</button>
+                <div class="divider"></div>
+                <h2><ha-icon icon="mdi:water"></ha-icon>Kök bölgesi</h2>
+                <div class="fields">
+                  ${this._field("Besin yoğunluğu", "ppm", "ppm", 0, 2000, 10)}
+                  ${this._field("Su sıcaklığı", "water_temperature", "°C", 10, 30, 0.5)}
+                  ${this._field("pH", "ph", "pH", 4, 8, 0.1)}
+                  ${this._field("Minimum DO", "do_minimum", "mg/L", 0, 15, 0.1)}
+                </div>
               </div>
-            </footer>
-          </div>
+              <div class="card-actions">
+                <span data-status>${this._notice}</span>
+                <div>
+                  <ha-button data-activate appearance="plain" ${this._editingStage === active ? "disabled" : ""}>Aktif aşama yap</ha-button>
+                  <ha-button data-save appearance="filled" ${this._saving ? "disabled" : ""}>Değişiklikleri kaydet</ha-button>
+                </div>
+              </div>
+            </ha-card>
+          </section>
 
           <aside>
-            <p class="eyebrow">LIVE / TARGET DELTA</p>
-            ${this._liveMetric("Air", entities.temperature_sensors, this._draft.day_temperature, "°C")}
-            ${this._liveMetric("Humidity", entities.humidity_sensors, this._draft.humidity, "%")}
-            ${this._liveMetric("VPD", entities.vpd_sensor, this._draft.vpd, " kPa")}
-            ${this._liveMetric("CO₂", entities.co2_sensors, this._draft.co2, " ppm")}
-            ${this._liveMetric("PPM", entities.ppm_sensor, this._draft.ppm, " ppm")}
-            ${this._liveMetric("Water", entities.water_temperature_sensor, this._draft.water_temperature, "°C")}
-            ${this._liveMetric("pH", entities.ph_sensor, this._draft.ph, "")}
-            ${this._liveMetric("DO", entities.do_sensor, this._draft.do_minimum, " mg/L")}
+            <ha-card header="Canlı ölçümler">
+              <div class="card-content metrics">
+                ${this._metric("Kabin sıcaklığı", "mdi:thermometer", entities.temperature_sensors, this._draft.day_temperature, "°C")}
+                ${this._metric("Nem", "mdi:water-percent", entities.humidity_sensors, this._draft.humidity, "%")}
+                ${this._metric("VPD", "mdi:gauge", entities.vpd_sensor, this._draft.vpd, "kPa", 2)}
+                ${this._metric("CO₂", "mdi:molecule-co2", entities.co2_sensors, this._draft.co2, "ppm", 0)}
+                ${this._metric("Besin", "mdi:flash", entities.ppm_sensor, this._draft.ppm, "ppm", 0)}
+                ${this._metric("Su sıcaklığı", "mdi:coolant-temperature", entities.water_temperature_sensor, this._draft.water_temperature, "°C")}
+                ${this._metric("pH", "mdi:ph", entities.ph_sensor, this._draft.ph, "pH", 2)}
+                ${this._metric("Çözünmüş oksijen", "mdi:chart-bubble", entities.do_sensor, this._draft.do_minimum, "mg/L", 2)}
+              </div>
+            </ha-card>
           </aside>
-        </section>
+        </div>
       </main>`;
 
     this.shadowRoot.querySelectorAll("[data-stage]").forEach((button) => {
@@ -248,74 +270,74 @@ class GrowSystemPanel extends HTMLElement {
   static get styles() {
     return `
       :host {
-        --ink: #172426;
-        --paper: #e9e5d9;
-        --paper-deep: #d8d1c1;
-        --reed: #5f8c76;
-        --water: #4f93a0;
-        --copper: #b97549;
-        --danger: #b65045;
         display: block;
         min-height: 100%;
-        color: var(--ink);
-        background: var(--paper);
-        font-family: Inter, "Segoe UI", sans-serif;
+        color: var(--primary-text-color);
+        background: var(--primary-background-color);
+        font-family: var(--paper-font-body1_-_font-family, Roboto, sans-serif);
       }
       * { box-sizing: border-box; }
-      main { max-width: 1500px; margin: 0 auto; padding: 34px clamp(18px, 4vw, 64px) 64px; }
-      header { display: flex; align-items: end; justify-content: space-between; gap: 30px; border-bottom: 1px solid rgba(23,36,38,.35); padding-bottom: 24px; }
-      h1 { font: 500 clamp(44px, 7vw, 96px)/.88 "Arial Narrow", "Roboto Condensed", sans-serif; letter-spacing: -.055em; margin: 8px 0 0; }
-      .eyebrow { font: 700 11px/1.2 ui-monospace, SFMono-Regular, monospace; letter-spacing: .13em; text-transform: uppercase; margin: 0; opacity: .65; }
-      .system-state { text-align: right; border-left: 4px solid var(--reed); padding-left: 16px; }
-      .system-state span { display:block; font: 700 10px ui-monospace, monospace; letter-spacing:.12em; opacity:.55; }
-      .system-state strong { display:block; font-size:22px; margin-top:5px; }
-      .stage-rail { display:grid; grid-template-columns:repeat(5,1fr); margin:26px 0 34px; border:1px solid rgba(23,36,38,.3); }
-      .stage { appearance:none; border:0; border-right:1px solid rgba(23,36,38,.25); background:transparent; color:inherit; padding:16px; text-align:left; cursor:pointer; display:grid; grid-template-columns:auto 1fr; gap:4px 12px; transition:background .18s,color .18s; }
-      .stage:last-child { border-right:0; }
-      .stage i { grid-row:1/3; font:700 10px ui-monospace,monospace; opacity:.45; font-style:normal; padding-top:3px; }
-      .stage span { font-weight:750; }
-      .stage b { font:600 11px ui-monospace,monospace; opacity:.6; }
-      .stage:hover,.stage.editing { background:var(--paper-deep); }
-      .stage.active { background:var(--ink); color:var(--paper); }
-      .workspace { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:34px; align-items:start; }
-      .editor { border-top:6px solid var(--ink); }
-      .section-head { display:flex; justify-content:space-between; gap:30px; align-items:baseline; padding:26px 0 12px; border-bottom:1px solid rgba(23,36,38,.25); }
-      .section-head div { display:flex; align-items:baseline; gap:12px; }
-      .section-head span { font:700 10px ui-monospace,monospace; color:var(--copper); }
-      h2 { font:700 25px/1 "Arial Narrow","Roboto Condensed",sans-serif; margin:0; letter-spacing:-.02em; }
-      .section-head p { margin:0; font-size:12px; opacity:.55; }
-      .field-grid { display:grid; grid-template-columns:repeat(4,minmax(135px,1fr)); gap:1px; background:rgba(23,36,38,.2); border-bottom:1px solid rgba(23,36,38,.2); }
-      .field { background:var(--paper); padding:18px 16px; min-height:94px; }
-      .field>span { display:block; font-size:11px; font-weight:750; opacity:.58; margin-bottom:12px; }
-      .input-shell { display:flex; align-items:baseline; gap:8px; }
-      input { width:100%; min-width:0; border:0; border-bottom:2px solid var(--ink); background:transparent; color:inherit; font:600 26px/1 ui-monospace,SFMono-Regular,monospace; padding:0 0 5px; outline:none; }
-      input:focus { border-color:var(--water); }
-      .input-shell b { font:700 10px ui-monospace,monospace; opacity:.55; }
-      footer { display:flex; justify-content:space-between; align-items:center; min-height:84px; gap:20px; }
-      footer>span { font:600 12px ui-monospace,monospace; color:var(--copper); }
-      footer button { border:1px solid var(--ink); padding:12px 18px; font-weight:750; cursor:pointer; margin-left:8px; }
-      footer button.primary { background:var(--ink); color:var(--paper); }
-      footer button.secondary { background:transparent; color:var(--ink); }
-      footer button:disabled { opacity:.35; cursor:not-allowed; }
-      aside { background:var(--ink); color:var(--paper); padding:24px; position:sticky; top:20px; }
-      aside>.eyebrow { color:#a8c8bb; margin-bottom:16px; }
-      .readout { padding:15px 0; border-top:1px solid rgba(233,229,217,.15); display:grid; grid-template-columns:1fr auto; gap:5px; }
-      .readout>span { font-size:12px; opacity:.7; }
-      .readout strong { font:600 23px ui-monospace,monospace; }
-      .readout small { font-size:9px; opacity:.55; margin-left:4px; }
-      .readout em { grid-column:1/-1; font:500 10px ui-monospace,monospace; font-style:normal; color:#d4a27f; }
-      .readout.good em { color:#91c5a8; }
-      .readout.muted { opacity:.45; }
-      .loading { display:grid; place-items:center; min-height:60vh; font:700 13px ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; }
-      @media(max-width:900px){
-        .workspace{grid-template-columns:1fr}.field-grid{grid-template-columns:repeat(2,1fr)}aside{position:static}.stage-rail{overflow-x:auto;grid-template-columns:repeat(5,minmax(145px,1fr))}
+      main { max-width: 1280px; margin: 0 auto; padding: 24px 16px 48px; }
+      .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 4px 24px; }
+      h1 { margin: 0; font-size: 28px; font-weight: 400; line-height: 36px; }
+      .page-heading p { margin: 4px 0 0; color: var(--secondary-text-color); font-size: 14px; }
+      .engine-status { display: flex; align-items: center; gap: 12px; color: var(--secondary-text-color); }
+      .engine-status ha-icon { color: var(--success-color, #43a047); }
+      .engine-status span, .engine-status small { display: block; }
+      .engine-status strong { color: var(--primary-text-color); font-size: 14px; font-weight: 500; }
+      .engine-status small { margin-top: 2px; font-size: 12px; }
+      ha-card { display: block; overflow: hidden; }
+      .stage-card { margin-bottom: 16px; }
+      .card-content { padding: 16px; }
+      .stage-grid { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 8px; padding-top: 0; }
+      .stage { position: relative; min-height: 82px; padding: 12px; border: 1px solid var(--divider-color); border-radius: var(--ha-card-border-radius, 12px); color: var(--primary-text-color); background: var(--card-background-color); text-align: left; cursor: pointer; }
+      .stage:hover { background: var(--secondary-background-color); }
+      .stage.selected { border: 2px solid var(--primary-color); padding: 11px; background: color-mix(in srgb, var(--primary-color) 8%, var(--card-background-color)); }
+      .stage ha-icon { display: block; width: 22px; height: 22px; margin-bottom: 9px; color: var(--state-icon-color); }
+      .stage.selected ha-icon { color: var(--primary-color); }
+      .stage span { display: block; font-size: 14px; font-weight: 500; }
+      .stage small { color: var(--secondary-text-color); font-size: 12px; }
+      .stage b { position: absolute; top: 8px; right: 8px; padding: 3px 7px; border-radius: 10px; color: var(--text-primary-color, #fff); background: var(--primary-color); font-size: 10px; font-weight: 500; }
+      .layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr); align-items: start; gap: 16px; }
+      h2 { display: flex; align-items: center; gap: 10px; margin: 4px 0 18px; font-size: 16px; font-weight: 500; }
+      h2 ha-icon { color: var(--state-icon-color); }
+      .fields { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 16px; }
+      .fields.three { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      ha-textfield { width: 100%; }
+      .divider { height: 1px; margin: 24px 0; background: var(--divider-color); }
+      .card-actions { display: flex; min-height: 64px; padding: 8px 16px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--divider-color); }
+      .card-actions > span { color: var(--secondary-text-color); font-size: 13px; }
+      .card-actions > div { display: flex; gap: 8px; }
+      .metrics { padding-top: 0; }
+      .metric { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 8px; min-height: 64px; border-bottom: 1px solid var(--divider-color); }
+      .metric:last-child { border-bottom: 0; }
+      .metric > ha-icon { color: var(--state-icon-color); }
+      .metric-name span, .metric-name small, .metric-value small { display: block; }
+      .metric-name span { font-size: 14px; }
+      .metric-name small, .metric-value small { margin-top: 3px; color: var(--secondary-text-color); font-size: 11px; }
+      .metric-value { text-align: right; white-space: nowrap; }
+      .metric-value strong { font-size: 18px; font-weight: 400; }
+      .metric-value > span { margin-left: 4px; color: var(--secondary-text-color); font-size: 12px; }
+      .loading { display: flex; min-height: 60vh; align-items: center; justify-content: center; gap: 12px; color: var(--secondary-text-color); }
+      @media (max-width: 900px) {
+        .stage-grid { overflow-x: auto; grid-template-columns: repeat(5, minmax(145px, 1fr)); }
+        .layout { grid-template-columns: 1fr; }
       }
-      @media(max-width:560px){
-        main{padding:20px 14px 44px}header{align-items:start;flex-direction:column}.system-state{text-align:left}.field-grid{grid-template-columns:1fr 1fr}.section-head p{display:none}footer{align-items:flex-start;flex-direction:column;padding:20px 0}footer button{margin:0 6px 0 0}
+      @media (max-width: 650px) {
+        main { padding: 16px 8px 32px; }
+        .page-heading { align-items: flex-start; flex-direction: column; }
+        .fields, .fields.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .card-actions { align-items: stretch; flex-direction: column; }
+        .card-actions > div { justify-content: flex-end; }
       }
-      @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+      @media (max-width: 420px) {
+        .fields, .fields.three { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
     `;
   }
 }
 
-customElements.define("grow-system-panel", GrowSystemPanel);
+if (!customElements.get("grow-system-panel")) {
+  customElements.define("grow-system-panel", GrowSystemPanel);
+}
