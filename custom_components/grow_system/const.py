@@ -20,6 +20,8 @@ CONF_CIRCULATION_FAN = "circulation_fan"
 CONF_CLIMATE = "climate"
 CONF_DEHUMIDIFIER = "dehumidifier"
 CONF_CHILLER = "chiller"
+CONF_CAMERAS = "cameras"
+CONF_LEAK_SENSORS = "leak_sensors"
 
 SENSOR_KEYS = (
     CONF_ENVIRONMENT_DEVICES,
@@ -31,6 +33,8 @@ SENSOR_KEYS = (
     CONF_PH_SENSOR,
     CONF_DO_SENSOR,
     CONF_WATER_TEMPERATURE_SENSOR,
+    CONF_CAMERAS,
+    CONF_LEAK_SENSORS,
 )
 
 CONTROL_KEYS = (
@@ -46,7 +50,7 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.4.1"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.5.0"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 
