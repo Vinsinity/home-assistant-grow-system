@@ -8,6 +8,7 @@ from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
 from .const import CONTROL_KEYS, DOMAIN, SENSOR_KEYS, STAGE_ORDER
+from .entity_map import resolve_entities
 
 
 @websocket_api.websocket_command({vol.Required("type"): "grow_system/config/get"})
@@ -15,14 +16,15 @@ from .const import CONTROL_KEYS, DOMAIN, SENSOR_KEYS, STAGE_ORDER
 async def websocket_get_config(hass, connection, msg) -> None:
     """Return the complete compact profile document."""
     store = hass.data[DOMAIN]["store"]
+    configured = hass.data[DOMAIN].get("configured_entities", {})
+    entities = resolve_entities(hass, configured)
+    hass.data[DOMAIN]["entities"] = entities
     connection.send_result(
         msg["id"],
         {
             **store.data,
-            "entities": hass.data[DOMAIN].get("entities", {}),
-            "configured_entities": hass.data[DOMAIN].get(
-                "configured_entities", {}
-            ),
+            "entities": entities,
+            "configured_entities": configured,
         },
     )
 
