@@ -9,7 +9,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import DOMAIN, PANEL_COMPONENT, PANEL_PATH, PANEL_URL
+from .const import DOMAIN, PANEL_COMPONENT, PANEL_MODULE_URL, PANEL_PATH, PANEL_URL
 from .store import GrowSystemStore
 from .websocket_api import async_register
 
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     panel_path = Path(__file__).parent / "frontend" / "grow-system-panel.js"
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(PANEL_URL, str(panel_path), True)]
+        [StaticPathConfig(PANEL_URL, str(panel_path), False)]
     )
     await panel_custom.async_register_panel(
         hass,
@@ -43,9 +43,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         webcomponent_name=PANEL_COMPONENT,
         sidebar_title="Grow System",
         sidebar_icon="mdi:sprout",
-        module_url=PANEL_URL,
+        module_url=PANEL_MODULE_URL,
         require_admin=True,
-        config_panel_domain=DOMAIN,
         handle_safe_area=True,
     )
     return True

@@ -6,5 +6,5 @@
   "documentation": "https://github.com/Vinsinity/home-assistant-grow-system",
   "iot_class": "calculated",
   "requirements": [],
-  "version": "0.2.1"
+  "version": "0.2.2"
 }

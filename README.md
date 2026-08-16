@@ -2,7 +2,7 @@
 
 Home Assistant profile manager and dedicated control surface for a staged indoor grow system.
 
-## Current scope (0.2.1)
+## Current scope (0.2.2)
 
 - Stores five profiles in one Home Assistant storage document.
 - Provides a dedicated responsive profile editor panel.
@@ -29,4 +29,4 @@ The **Grow System** panel is registered automatically. No YAML or SSH access is 
 
 Copy `custom_components/grow_system` into Home Assistant's `config/custom_components` directory, restart Home Assistant, and add the integration from Settings → Devices & services.
 
-The profile editor and entity mappings are intentionally separate from the control engine. Saving a profile, selecting a stage, or mapping equipment in version 0.2.1 does not operate equipment.
+The profile editor and entity mappings are intentionally separate from the control engine. Saving a profile, selecting a stage, or mapping equipment in version 0.2.2 does not operate equipment.
