@@ -48,6 +48,17 @@ class GrowSystemPanel extends HTMLElement {
     return this._hass?.states?.[entityId]?.state ?? fallback;
   }
 
+  _reading(entityOrEntities) {
+    const ids = Array.isArray(entityOrEntities)
+      ? entityOrEntities
+      : entityOrEntities ? [entityOrEntities] : [];
+    const values = ids
+      .map((entityId) => Number(this._state(entityId, "NaN")))
+      .filter(Number.isFinite);
+    if (!values.length) return NaN;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }
+
   _selectStage(stage) {
     this._editingStage = stage;
     this._draft = { ...this._config.profiles[stage] };
@@ -118,7 +129,7 @@ class GrowSystemPanel extends HTMLElement {
   }
 
   _liveMetric(label, entity, target, unit) {
-    const raw = Number(this._state(entity, "NaN"));
+    const raw = this._reading(entity);
     const targetValue = Number(target);
     const valid = Number.isFinite(raw);
     const delta = valid ? raw - targetValue : null;
@@ -140,6 +151,7 @@ class GrowSystemPanel extends HTMLElement {
 
     const order = ["germination", "early_veg", "veg", "bloom", "darkness"];
     const active = this._config.active_stage;
+    const entities = this._config.entities || {};
     const stageRail = order.map((stage, index) => {
       const profile = this._config.profiles[stage];
       const state = stage === active ? "active" : stage === this._editingStage ? "editing" : "";
@@ -211,14 +223,14 @@ class GrowSystemPanel extends HTMLElement {
 
           <aside>
             <p class="eyebrow">LIVE / TARGET DELTA</p>
-            ${this._liveMetric("Air", "sensor.tent_avarage_temperature", this._draft.day_temperature, "°C")}
-            ${this._liveMetric("Humidity", "sensor.tent_avarage_humidity", this._draft.humidity, "%")}
-            ${this._liveMetric("VPD", "sensor.tent_vpd", this._draft.vpd, " kPa")}
-            ${this._liveMetric("CO₂", "sensor.co2_sensor_local_co2", this._draft.co2, " ppm")}
-            ${this._liveMetric("PPM", "sensor.mycodo_atlas_ec_total_dissolved_solids", this._draft.ppm, " ppm")}
-            ${this._liveMetric("Water", "sensor.mycodo_atlas_pt_1000_temperature", this._draft.water_temperature, "°C")}
-            ${this._liveMetric("pH", "sensor.mycodo_atlas_ph_ion_concentration", this._draft.ph, "")}
-            ${this._liveMetric("DO", "sensor.mycodo_atlas_do_dissolved_oxygen", this._draft.do_minimum, " mg/L")}
+            ${this._liveMetric("Air", entities.temperature_sensors, this._draft.day_temperature, "°C")}
+            ${this._liveMetric("Humidity", entities.humidity_sensors, this._draft.humidity, "%")}
+            ${this._liveMetric("VPD", entities.vpd_sensor, this._draft.vpd, " kPa")}
+            ${this._liveMetric("CO₂", entities.co2_sensors, this._draft.co2, " ppm")}
+            ${this._liveMetric("PPM", entities.ppm_sensor, this._draft.ppm, " ppm")}
+            ${this._liveMetric("Water", entities.water_temperature_sensor, this._draft.water_temperature, "°C")}
+            ${this._liveMetric("pH", entities.ph_sensor, this._draft.ph, "")}
+            ${this._liveMetric("DO", entities.do_sensor, this._draft.do_minimum, " mg/L")}
           </aside>
         </section>
       </main>`;

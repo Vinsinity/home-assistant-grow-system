@@ -15,7 +15,9 @@ from .const import DOMAIN, STAGE_ORDER
 async def websocket_get_config(hass, connection, msg) -> None:
     """Return the complete compact profile document."""
     store = hass.data[DOMAIN]["store"]
-    connection.send_result(msg["id"], store.data)
+    connection.send_result(
+        msg["id"], {**store.data, "entities": hass.data[DOMAIN].get("entities", {})}
+    )
 
 
 @websocket_api.websocket_command(

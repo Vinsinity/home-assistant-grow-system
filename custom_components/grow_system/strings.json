@@ -2,13 +2,69 @@
   "title": "Grow System Extension",
   "config": {
     "step": {
-      "user": {
-        "title": "Grow System Extension",
-        "description": "Create the profile store and management API. The control engine remains disabled until explicitly enabled."
+      "sensors": {
+        "title": "Monitoring sensors",
+        "description": "Map the sensors used for live readings. CO2, temperature, and humidity support multiple entities and are averaged from available readings.",
+        "data": {
+          "co2_sensors": "CO2 sensors",
+          "temperature_sensors": "Air temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "vpd_sensor": "VPD sensor",
+          "ppm_sensor": "Nutrient PPM sensor",
+          "ph_sensor": "pH sensor",
+          "do_sensor": "Dissolved oxygen sensor",
+          "water_temperature_sensor": "Water temperature sensor"
+        }
+      },
+      "controls": {
+        "title": "Equipment mappings",
+        "description": "Map equipment now. Mapping does not enable automatic control; the safety engine remains disabled.",
+        "data": {
+          "light": "Grow light",
+          "co2_valve": "CO2 solenoid valve",
+          "exhaust_fan": "Exhaust fan",
+          "inline_fan": "Inline fan",
+          "circulation_fan": "Circulation fan",
+          "climate": "Air conditioner",
+          "dehumidifier": "Dehumidifier",
+          "chiller": "Water chiller"
+        }
       }
     },
     "abort": {
       "already_configured": "Grow System Extension is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "sensors": {
+        "title": "Monitoring sensors",
+        "description": "Change the sensor mappings used by Grow System.",
+        "data": {
+          "co2_sensors": "CO2 sensors",
+          "temperature_sensors": "Air temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "vpd_sensor": "VPD sensor",
+          "ppm_sensor": "Nutrient PPM sensor",
+          "ph_sensor": "pH sensor",
+          "do_sensor": "Dissolved oxygen sensor",
+          "water_temperature_sensor": "Water temperature sensor"
+        }
+      },
+      "controls": {
+        "title": "Equipment mappings",
+        "description": "Change equipment mappings. This still does not enable automatic control.",
+        "data": {
+          "light": "Grow light",
+          "co2_valve": "CO2 solenoid valve",
+          "exhaust_fan": "Exhaust fan",
+          "inline_fan": "Inline fan",
+          "circulation_fan": "Circulation fan",
+          "climate": "Air conditioner",
+          "dehumidifier": "Dehumidifier",
+          "chiller": "Water chiller"
+        }
+      }
     }
   }
 }

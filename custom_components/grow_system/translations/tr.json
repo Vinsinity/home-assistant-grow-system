@@ -2,13 +2,67 @@
   "title": "Grow System Extension",
   "config": {
     "step": {
-      "user": {
-        "title": "Grow System Extension",
-        "description": "Profil deposunu ve yönetim API'sini oluşturur. Kontrol motoru siz açıkça etkinleştirene kadar kapalı kalır."
+      "sensors": {
+        "title": "İzleme sensörleri",
+        "description": "Canlı ölçümlerde kullanılacak sensörleri eşleştirin. CO2, sıcaklık ve nem için birden fazla sensör seçilebilir; erişilebilir ölçümlerin ortalaması alınır.",
+        "data": {
+          "co2_sensors": "CO2 sensörleri",
+          "temperature_sensors": "Hava sıcaklığı sensörleri",
+          "humidity_sensors": "Nem sensörleri",
+          "vpd_sensor": "VPD sensörü",
+          "ppm_sensor": "Besin PPM sensörü",
+          "ph_sensor": "pH sensörü",
+          "do_sensor": "Çözünmüş oksijen sensörü",
+          "water_temperature_sensor": "Su sıcaklığı sensörü"
+        }
+      },
+      "controls": {
+        "title": "Ekipman eşleştirmeleri",
+        "description": "Ekipmanları şimdi eşleştirin. Bu işlem otomatik kontrolü açmaz; güvenlik motoru kapalı kalır.",
+        "data": {
+          "light": "Yetiştirme ışığı",
+          "co2_valve": "CO2 selenoid valfi",
+          "exhaust_fan": "Egzoz fanı",
+          "inline_fan": "Giriş fanı",
+          "circulation_fan": "Sirkülasyon fanı",
+          "climate": "Klima",
+          "dehumidifier": "Nem alma cihazı",
+          "chiller": "Su soğutucu"
+        }
       }
     },
-    "abort": {
-      "already_configured": "Grow System Extension zaten yapılandırılmış."
+    "abort": {"already_configured": "Grow System Extension zaten yapılandırılmış."}
+  },
+  "options": {
+    "step": {
+      "sensors": {
+        "title": "İzleme sensörleri",
+        "description": "Grow System tarafından kullanılan sensör eşleştirmelerini değiştirin.",
+        "data": {
+          "co2_sensors": "CO2 sensörleri",
+          "temperature_sensors": "Hava sıcaklığı sensörleri",
+          "humidity_sensors": "Nem sensörleri",
+          "vpd_sensor": "VPD sensörü",
+          "ppm_sensor": "Besin PPM sensörü",
+          "ph_sensor": "pH sensörü",
+          "do_sensor": "Çözünmüş oksijen sensörü",
+          "water_temperature_sensor": "Su sıcaklığı sensörü"
+        }
+      },
+      "controls": {
+        "title": "Ekipman eşleştirmeleri",
+        "description": "Ekipman eşleştirmelerini değiştirin. Bu işlem otomatik kontrolü açmaz.",
+        "data": {
+          "light": "Yetiştirme ışığı",
+          "co2_valve": "CO2 selenoid valfi",
+          "exhaust_fan": "Egzoz fanı",
+          "inline_fan": "Giriş fanı",
+          "circulation_fan": "Sirkülasyon fanı",
+          "climate": "Klima",
+          "dehumidifier": "Nem alma cihazı",
+          "chiller": "Su soğutucu"
+        }
+      }
     }
   }
 }
