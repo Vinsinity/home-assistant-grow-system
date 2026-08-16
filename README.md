@@ -2,7 +2,7 @@
 
 Home Assistant profile manager and dedicated control surface for a staged indoor grow system.
 
-## Current scope (0.5.0)
+## Current scope (0.6.0)
 
 - Stores five profiles in one Home Assistant storage document.
 - Provides a dedicated responsive profile editor panel.
@@ -11,6 +11,9 @@ Home Assistant profile manager and dedicated control surface for a staged indoor
 - Shows current readings with 24-hour Recorder history charts.
 - Lets administrators change device, sensor, and equipment mappings without opening the integration options dialog.
 - Supports unlimited camera and moisture-sensor mappings with a security overview and water-alarm state.
+- Uses a fixed four-camera desktop grid and keeps security directly below the stage tabs.
+- Maps an RDWC water-level sensor and RDWC circulation pump; air-circulation fans remain outside automatic control.
+- Lists incomplete required mappings in the panel header.
 - Shows live sensor values beside the selected profile targets.
 - Maps multiple environmental devices, automatically discovers their CO2, temperature, and humidity entities, and averages available readings.
 - Calculates live VPD from the discovered average temperature and humidity.
@@ -34,4 +37,4 @@ The **Grow System** panel is registered automatically. No YAML or SSH access is 
 
 Copy `custom_components/grow_system` into Home Assistant's `config/custom_components` directory, restart Home Assistant, and add the integration from Settings → Devices & services.
 
-The profile editor and entity mappings are intentionally separate from the control engine. Saving a profile, selecting a stage, or mapping equipment in version 0.5.0 does not operate equipment.
+The profile editor and entity mappings are intentionally separate from the control engine. Saving a profile, selecting a stage, or mapping equipment in version 0.6.0 does not operate equipment.

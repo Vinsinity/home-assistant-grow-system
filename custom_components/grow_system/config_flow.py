@@ -17,7 +17,6 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_CHILLER,
-    CONF_CIRCULATION_FAN,
     CONF_CLIMATE,
     CONF_CO2_VALVE,
     CONF_DEHUMIDIFIER,
@@ -28,7 +27,9 @@ from .const import (
     CONF_LIGHT,
     CONF_PH_SENSOR,
     CONF_PPM_SENSOR,
+    CONF_RDWC_PUMP,
     CONF_WATER_TEMPERATURE_SENSOR,
+    CONF_WATER_LEVEL_SENSOR,
     CONTROL_KEYS,
     DOMAIN,
     SENSOR_KEYS,
@@ -57,6 +58,7 @@ def _sensor_schema(defaults: dict[str, Any]) -> vol.Schema:
             _optional_default(defaults, CONF_PH_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_DO_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_WATER_TEMPERATURE_SENSOR): _entity("sensor"),
+            _optional_default(defaults, CONF_WATER_LEVEL_SENSOR): _entity(["sensor", "binary_sensor"]),
         }
     )
 
@@ -68,7 +70,7 @@ def _control_schema(defaults: dict[str, Any]) -> vol.Schema:
             _optional_default(defaults, CONF_CO2_VALVE): _entity("switch"),
             _optional_default(defaults, CONF_EXHAUST_FAN): _entity(["fan", "switch"]),
             _optional_default(defaults, CONF_INLINE_FAN): _entity(["fan", "switch"]),
-            _optional_default(defaults, CONF_CIRCULATION_FAN): _entity(["fan", "switch"]),
+            _optional_default(defaults, CONF_RDWC_PUMP): _entity(["switch", "fan"]),
             _optional_default(defaults, CONF_CLIMATE): _entity("climate"),
             _optional_default(defaults, CONF_DEHUMIDIFIER): _entity(["humidifier", "switch"]),
             _optional_default(defaults, CONF_CHILLER): _entity(["climate", "switch", "water_heater"]),

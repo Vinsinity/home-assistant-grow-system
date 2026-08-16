@@ -10,7 +10,8 @@
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",
-          "water_temperature_sensor": "Water temperature sensor"
+          "water_temperature_sensor": "Water temperature sensor",
+          "water_level_sensor": "RDWC water level sensor"
         }
       },
       "controls": {
@@ -21,7 +22,7 @@
           "co2_valve": "CO2 solenoid valve",
           "exhaust_fan": "Exhaust fan",
           "inline_fan": "Inline fan",
-          "circulation_fan": "Circulation fan",
+          "rdwc_pump": "RDWC circulation pump",
           "climate": "Air conditioner",
           "dehumidifier": "Dehumidifier",
           "chiller": "Water chiller"
@@ -42,7 +43,8 @@
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",
-          "water_temperature_sensor": "Water temperature sensor"
+          "water_temperature_sensor": "Water temperature sensor",
+          "water_level_sensor": "RDWC water level sensor"
         }
       },
       "controls": {
@@ -53,7 +55,7 @@
           "co2_valve": "CO2 solenoid valve",
           "exhaust_fan": "Exhaust fan",
           "inline_fan": "Inline fan",
-          "circulation_fan": "Circulation fan",
+          "rdwc_pump": "RDWC circulation pump",
           "climate": "Air conditioner",
           "dehumidifier": "Dehumidifier",
           "chiller": "Water chiller"

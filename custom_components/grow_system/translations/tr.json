@@ -10,7 +10,8 @@
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",
-          "water_temperature_sensor": "Su sıcaklığı sensörü"
+          "water_temperature_sensor": "Su sıcaklığı sensörü",
+          "water_level_sensor": "RDWC su seviye sensörü"
         }
       },
       "controls": {
@@ -21,7 +22,7 @@
           "co2_valve": "CO2 selenoid valfi",
           "exhaust_fan": "Egzoz fanı",
           "inline_fan": "Giriş fanı",
-          "circulation_fan": "Sirkülasyon fanı",
+          "rdwc_pump": "RDWC sirkülasyon pompası",
           "climate": "Klima",
           "dehumidifier": "Nem alma cihazı",
           "chiller": "Su soğutucu"
@@ -40,7 +41,8 @@
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",
-          "water_temperature_sensor": "Su sıcaklığı sensörü"
+          "water_temperature_sensor": "Su sıcaklığı sensörü",
+          "water_level_sensor": "RDWC su seviye sensörü"
         }
       },
       "controls": {
@@ -51,7 +53,7 @@
           "co2_valve": "CO2 selenoid valfi",
           "exhaust_fan": "Egzoz fanı",
           "inline_fan": "Giriş fanı",
-          "circulation_fan": "Sirkülasyon fanı",
+          "rdwc_pump": "RDWC sirkülasyon pompası",
           "climate": "Klima",
           "dehumidifier": "Nem alma cihazı",
           "chiller": "Su soğutucu"
