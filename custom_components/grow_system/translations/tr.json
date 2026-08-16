@@ -4,12 +4,9 @@
     "step": {
       "sensors": {
         "title": "İzleme sensörleri",
-        "description": "Canlı ölçümlerde kullanılacak sensörleri eşleştirin. CO2, sıcaklık ve nem için birden fazla sensör seçilebilir; erişilebilir ölçümlerin ortalaması alınır.",
+        "description": "Bir veya daha fazla ortam sensör cihazı seçin. Grow System her cihazın altındaki CO2, sıcaklık ve nem entity'lerini otomatik bulur ve VPD'yi hesaplar.",
         "data": {
-          "co2_sensors": "CO2 sensörleri",
-          "temperature_sensors": "Hava sıcaklığı sensörleri",
-          "humidity_sensors": "Nem sensörleri",
-          "vpd_sensor": "VPD sensörü",
+          "environment_devices": "Ortam sensör cihazları",
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",
@@ -37,12 +34,9 @@
     "step": {
       "sensors": {
         "title": "İzleme sensörleri",
-        "description": "Grow System tarafından kullanılan sensör eşleştirmelerini değiştirin.",
+        "description": "Ortam sensör cihazlarını seçin. Altlarındaki CO2, sıcaklık ve nem entity'leri otomatik keşfedilir.",
         "data": {
-          "co2_sensors": "CO2 sensörleri",
-          "temperature_sensors": "Hava sıcaklığı sensörleri",
-          "humidity_sensors": "Nem sensörleri",
-          "vpd_sensor": "VPD sensörü",
+          "environment_devices": "Ortam sensör cihazları",
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",

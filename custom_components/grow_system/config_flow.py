@@ -8,24 +8,26 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.core import callback
-from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
+from homeassistant.helpers.selector import (
+    DeviceSelector,
+    DeviceSelectorConfig,
+    EntitySelector,
+    EntitySelectorConfig,
+)
 
 from .const import (
     CONF_CHILLER,
     CONF_CIRCULATION_FAN,
     CONF_CLIMATE,
-    CONF_CO2_SENSORS,
     CONF_CO2_VALVE,
     CONF_DEHUMIDIFIER,
     CONF_DO_SENSOR,
+    CONF_ENVIRONMENT_DEVICES,
     CONF_EXHAUST_FAN,
-    CONF_HUMIDITY_SENSORS,
     CONF_INLINE_FAN,
     CONF_LIGHT,
     CONF_PH_SENSOR,
     CONF_PPM_SENSOR,
-    CONF_TEMPERATURE_SENSORS,
-    CONF_VPD_SENSOR,
     CONF_WATER_TEMPERATURE_SENSOR,
     CONTROL_KEYS,
     DOMAIN,
@@ -47,10 +49,10 @@ def _optional_default(defaults: dict[str, Any], key: str):
 def _sensor_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
-            vol.Optional(CONF_CO2_SENSORS, default=defaults.get(CONF_CO2_SENSORS, [])): _entity("sensor", multiple=True),
-            vol.Optional(CONF_TEMPERATURE_SENSORS, default=defaults.get(CONF_TEMPERATURE_SENSORS, [])): _entity("sensor", multiple=True),
-            vol.Optional(CONF_HUMIDITY_SENSORS, default=defaults.get(CONF_HUMIDITY_SENSORS, [])): _entity("sensor", multiple=True),
-            _optional_default(defaults, CONF_VPD_SENSOR): _entity("sensor"),
+            vol.Optional(
+                CONF_ENVIRONMENT_DEVICES,
+                default=defaults.get(CONF_ENVIRONMENT_DEVICES, []),
+            ): DeviceSelector(DeviceSelectorConfig(multiple=True)),
             _optional_default(defaults, CONF_PPM_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_PH_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_DO_SENSOR): _entity("sensor"),

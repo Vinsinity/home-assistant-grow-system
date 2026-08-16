@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "grow_system"
+CONF_ENVIRONMENT_DEVICES = "environment_devices"
 CONF_CO2_SENSORS = "co2_sensors"
 CONF_TEMPERATURE_SENSORS = "temperature_sensors"
 CONF_HUMIDITY_SENSORS = "humidity_sensors"
@@ -21,6 +22,7 @@ CONF_DEHUMIDIFIER = "dehumidifier"
 CONF_CHILLER = "chiller"
 
 SENSOR_KEYS = (
+    CONF_ENVIRONMENT_DEVICES,
     CONF_CO2_SENSORS,
     CONF_TEMPERATURE_SENSORS,
     CONF_HUMIDITY_SENSORS,
@@ -44,7 +46,7 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.2.2"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.3.0"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 

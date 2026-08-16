@@ -4,12 +4,9 @@
     "step": {
       "sensors": {
         "title": "Monitoring sensors",
-        "description": "Map the sensors used for live readings. CO2, temperature, and humidity support multiple entities and are averaged from available readings.",
+        "description": "Select one or more environmental sensor devices. Grow System discovers CO2, temperature, and humidity entities below each device automatically and calculates VPD.",
         "data": {
-          "co2_sensors": "CO2 sensors",
-          "temperature_sensors": "Air temperature sensors",
-          "humidity_sensors": "Humidity sensors",
-          "vpd_sensor": "VPD sensor",
+          "environment_devices": "Environmental sensor devices",
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",
@@ -39,12 +36,9 @@
     "step": {
       "sensors": {
         "title": "Monitoring sensors",
-        "description": "Change the sensor mappings used by Grow System.",
+        "description": "Select environmental sensor devices. Their CO2, temperature, and humidity entities are discovered automatically.",
         "data": {
-          "co2_sensors": "CO2 sensors",
-          "temperature_sensors": "Air temperature sensors",
-          "humidity_sensors": "Humidity sensors",
-          "vpd_sensor": "VPD sensor",
+          "environment_devices": "Environmental sensor devices",
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",

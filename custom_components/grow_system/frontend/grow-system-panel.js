@@ -47,6 +47,14 @@ class GrowSystemPanel extends HTMLElement {
   }
 
   _reading(entityOrEntities) {
+    if (entityOrEntities === "__calculated_vpd__") {
+      const entities = this._config?.entities || {};
+      const temperature = this._reading(entities.temperature_sensors);
+      const humidity = this._reading(entities.humidity_sensors);
+      if (!Number.isFinite(temperature) || !Number.isFinite(humidity)) return NaN;
+      const saturation = 0.6108 * Math.exp((17.27 * temperature) / (temperature + 237.3));
+      return saturation * (1 - humidity / 100);
+    }
     const ids = Array.isArray(entityOrEntities)
       ? entityOrEntities
       : entityOrEntities ? [entityOrEntities] : [];
@@ -245,7 +253,7 @@ class GrowSystemPanel extends HTMLElement {
               <div class="card-content metrics">
                 ${this._metric("Kabin sıcaklığı", "mdi:thermometer", entities.temperature_sensors, this._draft.day_temperature, "°C")}
                 ${this._metric("Nem", "mdi:water-percent", entities.humidity_sensors, this._draft.humidity, "%")}
-                ${this._metric("VPD", "mdi:gauge", entities.vpd_sensor, this._draft.vpd, "kPa", 2)}
+                ${this._metric("VPD", "mdi:gauge", entities.vpd_sensor || "__calculated_vpd__", this._draft.vpd, "kPa", 2)}
                 ${this._metric("CO₂", "mdi:molecule-co2", entities.co2_sensors, this._draft.co2, "ppm", 0)}
                 ${this._metric("Besin", "mdi:flash", entities.ppm_sensor, this._draft.ppm, "ppm", 0)}
                 ${this._metric("Su sıcaklığı", "mdi:coolant-temperature", entities.water_temperature_sensor, this._draft.water_temperature, "°C")}
