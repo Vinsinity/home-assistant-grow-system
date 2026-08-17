@@ -1,4 +1,6 @@
 class HydroponicSystemPanel extends HTMLElement {
+  static tabs = new Set(["overview","calendar","album","profiles","nutrients","hardware","dosing","settings"]);
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -8,7 +10,7 @@ class HydroponicSystemPanel extends HTMLElement {
     this._profileDrafts = {};
     this._settings = {};
     this._editingStage = "darkness";
-    this._tab = "overview";
+    this._tab = this._tabFromPath(window.location.pathname);
     this._notice = "";
     this._history = {};
     this._hardwareDraft = null;
@@ -30,6 +32,10 @@ class HydroponicSystemPanel extends HTMLElement {
     this._profileEditor = null;
     this._systemDialog = null;
     this._calendarMonth = new Date(new Date().getFullYear(),new Date().getMonth(),1);
+    this._onPopState = () => {
+      const tab=this._tabFromPath(window.location.pathname);
+      if(tab!==this._tab){this._tab=tab;this._notice="";this._render();}
+    };
   }
 
   set hass(value) {
@@ -38,9 +44,28 @@ class HydroponicSystemPanel extends HTMLElement {
     else this._refreshReadings();
   }
   set narrow(value) { this.toggleAttribute("narrow", Boolean(value)); }
-  set route(value) { this._route = value; }
+  set route(value) {
+    this._route = value;
+    const tab=this._tabFromPath(value?.path || window.location.pathname);
+    if(tab!==this._tab){this._tab=tab;this._notice="";this._render();}
+  }
   set panel(value) { this._panel = value; }
-  connectedCallback() { this._render(); }
+  connectedCallback() { window.addEventListener("popstate",this._onPopState);this._render(); }
+  disconnectedCallback() { window.removeEventListener("popstate",this._onPopState); }
+
+  _tabFromPath(path) {
+    const parts=String(path||"").split("/").filter(Boolean),panelIndex=parts.indexOf("hydroponic-system");
+    const candidate=panelIndex>=0?parts[panelIndex+1]:parts.at(-1);
+    return HydroponicSystemPanel.tabs.has(candidate)?candidate:"overview";
+  }
+
+  _navigateTab(tab,replace=false) {
+    if(!HydroponicSystemPanel.tabs.has(tab))tab="overview";
+    const path=tab==="overview"?"/hydroponic-system":`/hydroponic-system/${tab}`;
+    window.history[replace?"replaceState":"pushState"](null,"",path);
+    this._tab=tab;this._notice="";this._systemDialog=null;this._render();
+    window.dispatchEvent(new CustomEvent("location-changed",{detail:{replace}}));
+  }
 
   async _load() {
     if (!this._hass || this._loading) return;
@@ -219,7 +244,7 @@ class HydroponicSystemPanel extends HTMLElement {
   }
   async _startCultivation(){
     if(!confirm("Bugünün tarihiyle yeni yetiştirme başlatılsın mı? Varsayılan plan uygulanacak; aşamalar otomatik değiştirilmeyecek."))return;
-    try{const cultivation=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/cultivation/start"});this._config.cultivation=cultivation;this._config.active_stage="germination";this._editingStage="germination";this._draft={...this._config.profiles.germination};this._tab="calendar";this._render();}catch(error){this._notice=`Yetiştirme başlatılamadı: ${error.message||error}`;this._render();}
+    try{const cultivation=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/cultivation/start"});this._config.cultivation=cultivation;this._config.active_stage="germination";this._editingStage="germination";this._draft={...this._config.profiles.germination};this._navigateTab("calendar");}catch(error){this._notice=`Yetiştirme başlatılamadı: ${error.message||error}`;this._render();}
   }
 
   _connectionGroups() {
@@ -645,9 +670,9 @@ class HydroponicSystemPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-open-system]").forEach((button)=>button.addEventListener("click",()=>{this._systemDialog=button.dataset.openSystem;this._render();}));
     this.shadowRoot.querySelectorAll("[data-close-system]").forEach((button)=>button.addEventListener("click",()=>{this._systemDialog=null;this._render();}));
     this.shadowRoot.querySelector("[data-system-scrim]")?.addEventListener("click",(event)=>{if(event.target===event.currentTarget){this._systemDialog=null;this._render();}});
-    this.shadowRoot.querySelector("[data-open-settings]")?.addEventListener("click",()=>{this._systemDialog=null;this._tab="settings";this._render();});
-    this.shadowRoot.querySelector("[data-edit-active-stage]")?.addEventListener("click",()=>{this._profileEditor=this._config.active_stage;this._tab="profiles";this._notice="";this._render();});
-    this.shadowRoot.querySelectorAll("[data-tab]").forEach((b)=>b.onclick=()=>{this._tab=b.dataset.tab;this._notice="";this._render();});
+    this.shadowRoot.querySelector("[data-open-settings]")?.addEventListener("click",()=>this._navigateTab("settings"));
+    this.shadowRoot.querySelector("[data-edit-active-stage]")?.addEventListener("click",()=>{this._profileEditor=this._config.active_stage;this._navigateTab("profiles");});
+    this.shadowRoot.querySelectorAll("[data-tab]").forEach((b)=>b.onclick=()=>this._navigateTab(b.dataset.tab));
     this.shadowRoot.querySelectorAll("[data-field]").forEach((el)=>el.addEventListener("input",(ev)=>{this._draft[ev.currentTarget.dataset.field]=Number(ev.currentTarget.value);this._notice="Kaydedilmemiş değişiklikler var";this._updateNotice();}));
     this.shadowRoot.querySelector("[data-save-profile]")?.addEventListener("click",()=>this._saveProfile());
     this.shadowRoot.querySelector("[data-activate]")?.addEventListener("click",()=>this._activate());
