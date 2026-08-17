@@ -134,15 +134,46 @@ class AtlasEzoBus:
             firmware=fields[2] if len(fields) > 2 else None,
         )
 
-    def discover(self) -> list[AtlasDevice]:
-        """Probe only documented sensor addresses; never scan arbitrary HATs."""
+    def discover(self, addresses=None) -> list[AtlasDevice]:
+        """Probe selected addresses; default to documented EZO addresses."""
         devices: list[AtlasDevice] = []
-        for address in DEFAULT_ADDRESSES:
+        for address in addresses or DEFAULT_ADDRESSES:
             try:
                 devices.append(self.identify(address))
             except (AtlasProtocolError, OSError):
                 continue
         return devices
+
+    def calibration_status(self, device: AtlasDevice) -> str:
+        """Return the circuit calibration status without changing it."""
+        return self.command(device.address, "Cal,?", processing_time=0.3)
+
+    def calibrate(self, device: AtlasDevice, operation: str, value=None) -> str:
+        """Run one explicitly requested Atlas calibration command."""
+        kind = device.device_type.lower()
+        if operation == "clear":
+            command = "Cal,clear"
+        elif kind == "ph" and operation in {"low", "mid", "high"}:
+            if value is None:
+                raise ValueError("pH calibration requires a reference value")
+            command = f"Cal,{operation},{float(value):g}"
+        elif kind == "do" and operation == "atmospheric":
+            command = "Cal"
+        elif kind == "do" and operation == "zero":
+            command = "Cal,0"
+        elif kind == "ec" and operation == "dry":
+            command = "Cal,dry"
+        elif kind == "ec" and operation in {"one", "low", "high"}:
+            if value is None:
+                raise ValueError("EC calibration requires a reference value")
+            command = f"Cal,{operation},{float(value):g}"
+        elif kind == "rtd" and operation == "reference":
+            if value is None:
+                raise ValueError("RTD calibration requires a reference value")
+            command = f"Cal,{float(value):g}"
+        else:
+            raise ValueError(f"Unsupported {device.device_type} calibration: {operation}")
+        return self.command(device.address, command, processing_time=1.3)
 
     def read_measurement(self, device: AtlasDevice) -> tuple[float, ...]:
         """Read the circuit and parse all numeric response fields."""

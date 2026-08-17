@@ -56,6 +56,27 @@ class AtlasEzoBusTest(unittest.TestCase):
         with self.assertRaises(atlas_ezo.AtlasProtocolError):
             bus.command(0x63, "bad")
 
+    def test_manual_discovery_addresses(self):
+        transport = FakeTransport([b"\x01?I,pH,2.16\x00"])
+        bus = atlas_ezo.AtlasEzoBus(transport=transport, sleep=lambda _: None)
+        devices = bus.discover([0x62])
+        self.assertEqual(0x62, devices[0].address)
+        self.assertEqual([(0x62, b"i")], transport.writes)
+
+    def test_ph_mid_calibration(self):
+        transport = FakeTransport([b"\x01\x00"])
+        bus = atlas_ezo.AtlasEzoBus(transport=transport, sleep=lambda _: None)
+        device = atlas_ezo.AtlasDevice(0x63, "pH")
+        bus.calibrate(device, "mid", 7.0)
+        self.assertEqual([(0x63, b"Cal,mid,7")], transport.writes)
+
+    def test_rejects_invalid_calibration(self):
+        bus = atlas_ezo.AtlasEzoBus(
+            transport=FakeTransport([]), sleep=lambda _: None
+        )
+        with self.assertRaises(ValueError):
+            bus.calibrate(atlas_ezo.AtlasDevice(0x61, "DO"), "mid", 7)
+
 
 if __name__ == "__main__":
     unittest.main()

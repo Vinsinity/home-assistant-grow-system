@@ -22,6 +22,12 @@ class GrowSystemStore:
             "active_stage": "darkness",
             "engine_enabled": False,
             "profiles": deepcopy(DEFAULT_PROFILES),
+            "hardware": {
+                "i2c_bus": 1,
+                "poll_interval": 30,
+                "atlas_auto_discovery": True,
+                "atlas_devices": [],
+            },
         }
 
     async def async_load(self) -> None:
@@ -36,6 +42,7 @@ class GrowSystemStore:
         stored_profiles = stored.get("profiles", {})
         for stage, defaults in DEFAULT_PROFILES.items():
             self.data["profiles"][stage].update(stored_profiles.get(stage, {}))
+        self.data["hardware"].update(stored.get("hardware", {}))
 
     async def async_save(self) -> None:
         """Persist current data."""
@@ -53,3 +60,9 @@ class GrowSystemStore:
         )
         await self.async_save()
         return self.data["profiles"][stage]
+
+    async def async_update_hardware(self, values: dict[str, Any]) -> dict[str, Any]:
+        """Persist validated native hardware preferences."""
+        self.data["hardware"].update(values)
+        await self.async_save()
+        return self.data["hardware"]

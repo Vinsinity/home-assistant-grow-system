@@ -35,7 +35,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN]["configured_entities"] = configured
     hass.data[DOMAIN]["entities"] = resolve_entities(hass, configured)
 
-    atlas = AtlasI2CCoordinator(hass)
+    hardware = store.data.get("hardware", {})
+    atlas = AtlasI2CCoordinator(
+        hass,
+        bus_number=int(hardware.get("i2c_bus", 1)),
+        hardware=hardware,
+    )
     hass.data[DOMAIN]["atlas_i2c"] = atlas
     if await atlas.async_initialize():
         await atlas.async_config_entry_first_refresh()

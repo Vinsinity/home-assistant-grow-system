@@ -24,6 +24,7 @@ async def websocket_get_config(hass, connection, msg) -> None:
         msg["id"],
         {
             **store.data,
+            "hardware_config": store.data.get("hardware", {}),
             "entities": entities,
             "configured_entities": configured,
             "hardware": {
@@ -99,9 +100,107 @@ async def websocket_select_stage(hass, connection, msg) -> None:
     connection.send_result(msg["id"], {"active_stage": msg["stage"]})
 
 
+def _address(value) -> int:
+    """Normalize and validate a user supplied 7-bit I2C address."""
+    address = int(value, 0) if isinstance(value, str) else int(value)
+    if not 0x08 <= address <= 0x77:
+        raise ValueError("I2C address must be between 0x08 and 0x77")
+    return address
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/save",
+        vol.Required("atlas_auto_discovery"): bool,
+        vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
+        vol.Required("atlas_devices"): list,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_save_hardware(hass, connection, msg) -> None:
+    """Save native I2C preferences and reload the integration."""
+    try:
+        devices = []
+        seen = set()
+        for item in msg["atlas_devices"]:
+            address = _address(item.get("address"))
+            if address in seen:
+                continue
+            seen.add(address)
+            devices.append(
+                {
+                    "address": address,
+                    "name": str(item.get("name") or f"Atlas 0x{address:02X}")[:64],
+                    "expected_type": str(item.get("expected_type") or "auto")[:16],
+                    "enabled": bool(item.get("enabled", True)),
+                }
+            )
+    except (TypeError, ValueError, AttributeError) as err:
+        connection.send_error(msg["id"], "invalid_hardware", str(err))
+        return
+    store = hass.data[DOMAIN]["store"]
+    hardware = await store.async_update_hardware(
+        {
+            "atlas_auto_discovery": msg["atlas_auto_discovery"],
+            "poll_interval": msg["poll_interval"],
+            "atlas_devices": devices,
+        }
+    )
+    connection.send_result(msg["id"], hardware)
+    entry = hass.data[DOMAIN]["entry"]
+    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/calibration_status",
+        vol.Required("address"): vol.Any(int, str),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_calibration_status(hass, connection, msg) -> None:
+    """Read one Atlas circuit's calibration status."""
+    try:
+        address = _address(msg["address"])
+        status = await hass.data[DOMAIN]["atlas_i2c"].async_calibration_status(address)
+    except (TypeError, ValueError, OSError, RuntimeError) as err:
+        connection.send_error(msg["id"], "calibration_status_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"address": address, "status": status})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/calibrate",
+        vol.Required("address"): vol.Any(int, str),
+        vol.Required("operation"): str,
+        vol.Optional("value"): vol.Any(int, float),
+        vol.Required("confirmed"): True,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_calibrate(hass, connection, msg) -> None:
+    """Run an explicitly confirmed and driver-validated calibration."""
+    try:
+        address = _address(msg["address"])
+        result = await hass.data[DOMAIN]["atlas_i2c"].async_calibrate(
+            address, msg["operation"], msg.get("value")
+        )
+    except (TypeError, ValueError, OSError, RuntimeError) as err:
+        connection.send_error(msg["id"], "calibration_failed", str(err))
+        return
+    connection.send_result(msg["id"], {"address": address, "result": result})
+
+
 def async_register(hass: HomeAssistant) -> None:
     """Register WebSocket commands."""
     websocket_api.async_register_command(hass, websocket_get_config)
     websocket_api.async_register_command(hass, websocket_save_entities)
     websocket_api.async_register_command(hass, websocket_save_profile)
     websocket_api.async_register_command(hass, websocket_select_stage)
+    websocket_api.async_register_command(hass, websocket_save_hardware)
+    websocket_api.async_register_command(hass, websocket_calibration_status)
+    websocket_api.async_register_command(hass, websocket_calibrate)
