@@ -115,9 +115,22 @@ class HydroponicSystemStore:
         if stage not in self.data["profiles"]:
             raise ValueError(f"Unknown stage: {stage}")
         allowed = set(DEFAULT_PROFILES[stage]) - {"name"}
-        self.data["profiles"][stage].update(
-            {key: value for key, value in values.items() if key in allowed}
-        )
+        updates = {key: value for key, value in values.items() if key in allowed}
+        if "nutrient_ids" in updates:
+            if not isinstance(updates["nutrient_ids"], list):
+                raise ValueError("nutrient_ids must be a list")
+            valid_ids = {
+                fluid.get("id")
+                for fluid in self.data["hardware"].get("dosing_fluids", [])
+                if fluid.get("id")
+                and fluid.get("id") not in {"ph_up", "ph_down"}
+                and fluid.get("category") not in {"ph_up", "ph_down"}
+            }
+            updates["nutrient_ids"] = list(dict.fromkeys(
+                nutrient_id for nutrient_id in updates["nutrient_ids"]
+                if isinstance(nutrient_id, str) and nutrient_id in valid_ids
+            ))
+        self.data["profiles"][stage].update(updates)
         await self.async_save()
         return self.data["profiles"][stage]
 

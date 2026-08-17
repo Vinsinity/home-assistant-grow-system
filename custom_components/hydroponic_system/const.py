@@ -54,7 +54,7 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/hydroponic-system-static/hydroponic-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.24.8"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.24.9"
 PANEL_PATH = "hydroponic-system"
 PANEL_COMPONENT = "hydroponic-system-panel"
 
@@ -96,6 +96,7 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+        "nutrient_ids": [],
     },
     "early_veg": {
         "name": "Erken gelişim",
@@ -111,6 +112,7 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+        "nutrient_ids": [],
     },
     "veg": {
         "name": "Gelişim",
@@ -126,6 +128,7 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+        "nutrient_ids": [],
     },
     "bloom": {
         "name": "Çiçeklenme",
@@ -141,6 +144,7 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+        "nutrient_ids": [],
     },
     "darkness": {
         "name": "Karanlık",
@@ -156,6 +160,7 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+        "nutrient_ids": [],
     },
     "harvest": {
         "name": "Hasat / Kurutma",
@@ -171,5 +176,6 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 0,
+        "nutrient_ids": [],
     },
 }
