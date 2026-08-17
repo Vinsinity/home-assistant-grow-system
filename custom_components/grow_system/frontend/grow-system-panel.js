@@ -274,9 +274,9 @@ class GrowSystemPanel extends HTMLElement {
   async _saveHardware() {
     const status=this.shadowRoot.querySelector("[data-hardware-status]"); if(status)status.textContent="Kaydediliyor…";
     try {
-      await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[]});
-      if(status)status.textContent="Kaydedildi; donanım yeniden yükleniyor…";
-      setTimeout(()=>{this._config=null;this._loading=false;this._load();},2500);
+      const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[]});
+      if(result.reloading){if(status)status.textContent="Sensör entity’leri hazırlanıyor…";setTimeout(()=>{this._config=null;this._loading=false;this._load();},2500);}
+      else{this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));if(status)status.textContent="Cihaz eklendi";this._render();}
     } catch(error) { if(status)status.textContent=`Kaydedilemedi: ${error.message||error}`; }
   }
   async _calibration(address) {

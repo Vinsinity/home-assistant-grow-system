@@ -76,6 +76,22 @@ async def websocket_save_entities(hass, connection, msg) -> None:
 async def websocket_save_profile(hass, connection, msg) -> None:
     """Save one stage profile."""
     store = hass.data[DOMAIN]["store"]
+    previous = store.data.get("hardware", {})
+    atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}
+    previous_atlas = {
+        (item.get("address"), item.get("driver"))
+        for item in previous.get("device_assignments", [])
+        if item.get("driver") in atlas_drivers
+    }
+    next_atlas = {
+        (item.get("address"), item.get("driver"))
+        for item in assignments
+        if item.get("driver") in atlas_drivers
+    }
+    reload_required = (
+        previous_atlas != next_atlas
+        or int(previous.get("poll_interval", 30)) != msg["poll_interval"]
+    )
     try:
         profile = await store.async_update_profile(msg["stage"], msg["values"])
     except ValueError as err:
@@ -143,15 +159,34 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
         connection.send_error(msg["id"], "invalid_assignment", str(err))
         return
     store = hass.data[DOMAIN]["store"]
+    previous = store.data.get("hardware", {})
+    atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}
+    previous_atlas = {
+        (item.get("address"), item.get("driver"))
+        for item in previous.get("device_assignments", [])
+        if item.get("driver") in atlas_drivers
+    }
+    next_atlas = {
+        (item.get("address"), item.get("driver"))
+        for item in assignments
+        if item.get("driver") in atlas_drivers
+    }
+    reload_required = (
+        previous_atlas != next_atlas
+        or int(previous.get("poll_interval", 30)) != msg["poll_interval"]
+    )
     hardware = await store.async_update_hardware(
         {
             "poll_interval": msg["poll_interval"],
             "device_assignments": assignments,
         }
     )
-    connection.send_result(msg["id"], hardware)
-    entry = hass.data[DOMAIN]["entry"]
-    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+    connection.send_result(
+        msg["id"], {"hardware": hardware, "reloading": reload_required}
+    )
+    if reload_required:
+        entry = hass.data[DOMAIN]["entry"]
+        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
 
 
 @websocket_api.websocket_command(
