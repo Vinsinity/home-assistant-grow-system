@@ -131,24 +131,28 @@ class GrowSystemPanel extends HTMLElement {
   }
 
   _metricCard(label, icon, value, target, unit, precision=1) {
-    const raw = this._reading(value), valid = Number.isFinite(raw);
-    return `<ha-card class="metric-card"><div class="metric-head"><ha-icon icon="${icon}"></ha-icon><div><span>${label}</span><small>Hedef ${target} ${unit}</small></div>
+    const raw = this._reading(value), valid = Number.isFinite(raw), hasTarget = Number.isFinite(Number(target));
+    const targetLabel = hasTarget ? `Hedef ${target} ${unit}` : "Aktif aşama hedefi yok";
+    const footer = !valid ? "Sensör eşleştirilmedi" : hasTarget ? `${raw-target >= 0 ? "+" : ""}${(raw-target).toFixed(precision)} hedef farkı` : "Yalnızca canlı ölçüm";
+    return `<ha-card class="metric-card"><div class="metric-head"><ha-icon icon="${icon}"></ha-icon><div><span>${label}</span><small>${targetLabel}</small></div>
       <strong>${valid ? raw.toFixed(precision) : "—"}<i>${valid ? unit : "Veri yok"}</i></strong></div>
       ${value === "__vpd__" ? '<div class="no-history">Sıcaklık ve nemden canlı hesaplanıyor</div>' : this._sparkline(value)}
-      <div class="chart-foot"><span>24 saat</span><span>${valid ? `${raw-target >= 0 ? "+" : ""}${(raw-target).toFixed(precision)} hedef farkı` : "Sensör eşleştirilmedi"}</span></div></ha-card>`;
+      <div class="chart-foot"><span>24 saat</span><span>${footer}</span></div></ha-card>`;
   }
 
   _overview() {
-    const e = this._config.entities || {}, p = this._draft;
+    const e = this._config.entities || {};
+    const stage = this._config?.cultivation?.active ? this._config.active_stage : null;
+    const p = stage ? this._config?.profiles?.[stage] : null;
     return `<section class="metric-grid">
-      ${this._metricCard("Kabin sıcaklığı","mdi:thermometer",e.temperature_sensors,p.day_temperature,"°C")}
-      ${this._metricCard("Nem","mdi:water-percent",e.humidity_sensors,p.humidity,"%")}
-      ${this._metricCard("VPD","mdi:gauge","__vpd__",p.vpd,"kPa",2)}
-      ${this._metricCard("CO₂","mdi:molecule-co2",e.co2_sensors,p.co2,"ppm",0)}
-      ${this._metricCard("Besin","mdi:flash",e.ppm_sensor,p.ppm,"ppm",0)}
-      ${this._metricCard("Su sıcaklığı","mdi:coolant-temperature",e.water_temperature_sensor,p.water_temperature,"°C")}
-      ${this._metricCard("pH","mdi:ph",e.ph_sensor,p.ph,"pH",2)}
-      ${this._metricCard("Çözünmüş oksijen","mdi:chart-bubble",e.do_sensor,p.do_minimum,"mg/L",2)}
+      ${this._metricCard("Kabin sıcaklığı","mdi:thermometer",e.temperature_sensors,p?.day_temperature,"°C")}
+      ${this._metricCard("Nem","mdi:water-percent",e.humidity_sensors,p?.humidity,"%")}
+      ${this._metricCard("VPD","mdi:gauge","__vpd__",p?.vpd,"kPa",2)}
+      ${this._metricCard("CO₂","mdi:molecule-co2",e.co2_sensors,p?.co2,"ppm",0)}
+      ${this._metricCard("Besin","mdi:flash",e.ppm_sensor,p?.ppm,"ppm",0)}
+      ${this._metricCard("Su sıcaklığı","mdi:coolant-temperature",e.water_temperature_sensor,p?.water_temperature,"°C")}
+      ${this._metricCard("pH","mdi:ph",e.ph_sensor,p?.ph,"pH",2)}
+      ${this._metricCard("Çözünmüş oksijen","mdi:chart-bubble",e.do_sensor,p?.do_minimum,"mg/L",2)}
     </section>`;
   }
 
