@@ -285,6 +285,7 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
                         "id": channel_id,
                         "name": str(channel.get("name") or f"Motor {channel_id}")[:64],
                         "fluid_id": fluid_id,
+                        "pump": _pump_profile(channel.get("pump")),
                         "calibration": _motor_calibration(channel.get("calibration")),
                     })
                 assignment["channels"] = channels
@@ -339,6 +340,43 @@ def _motor_calibration(value) -> dict | None:
         "speed": speed,
         "flow_ml_s": round(volume_ml / seconds, 5),
         "calibrated_at": str(value.get("calibrated_at") or "")[:40],
+    }
+
+
+def _pump_profile(value) -> dict:
+    """Validate the physical load attached to one Waveshare channel."""
+    if not isinstance(value, dict):
+        value = {
+            "catalog_id": "nkp_dcl_s10y",
+            "brand": "NKP",
+            "model": "NKP-DCL-S10Y",
+            "pump_type": "peristaltic_dc",
+            "voltage": 12,
+            "power_w": 5,
+            "current_a": 0.417,
+            "pwm": True,
+            "reversible": True,
+        }
+    voltage = float(value.get("voltage", 0))
+    power_w = float(value.get("power_w", 0))
+    current_a = float(value.get("current_a") or (power_w / voltage if voltage else 0))
+    if not 6 <= voltage <= 12:
+        raise ValueError("Waveshare pump voltage must be between 6 and 12 V")
+    if not 0 < current_a <= 1.2:
+        raise ValueError("Pump current exceeds the Waveshare 1.2 A channel limit")
+    return {
+        "catalog_id": str(value.get("catalog_id") or "custom")[:64],
+        "brand": str(value.get("brand") or "Özel")[:64],
+        "model": str(value.get("model") or "DC peristaltik pompa")[:96],
+        "pump_type": "peristaltic_dc",
+        "voltage": round(voltage, 2),
+        "power_w": round(power_w, 3),
+        "current_a": round(current_a, 3),
+        "flow_min_ml_min": round(float(value.get("flow_min_ml_min", 0)), 2),
+        "flow_max_ml_min": round(float(value.get("flow_max_ml_min", 0)), 2),
+        "pwm": bool(value.get("pwm", True)),
+        "reversible": bool(value.get("reversible", True)),
+        "verified": bool(value.get("verified", False)),
     }
 
 
