@@ -47,16 +47,29 @@ class GrowSystemStore:
             await self.async_save()
             return
 
+        migrated = False
         self.data["active_stage"] = stored.get("active_stage")
         self.data["engine_enabled"] = stored.get("engine_enabled", False)
         stored_profiles = stored.get("profiles", {})
         for stage, defaults in DEFAULT_PROFILES.items():
             self.data["profiles"][stage].update(stored_profiles.get(stage, {}))
+            if stage not in stored_profiles or any(
+                key not in stored_profiles.get(stage, {}) for key in defaults
+            ):
+                migrated = True
         self.data["hardware"].update(stored.get("hardware", {}))
         self.data["calendar"].update(stored.get("calendar", {}))
         self.data["cultivation"].update(stored.get("cultivation", {}))
         if not self.data["cultivation"].get("plan"):
             self.data["cultivation"]["plan"] = deepcopy(DEFAULT_CULTIVATION_PLAN)
+            migrated = True
+        else:
+            plan = self.data["cultivation"]["plan"]
+            known_stages = {item.get("stage") for item in plan}
+            for default in DEFAULT_CULTIVATION_PLAN:
+                if default["stage"] not in known_stages:
+                    plan.append(deepcopy(default))
+                    migrated = True
         # A stage only has operational meaning inside an active cultivation.
         # Normalize older documents that stored "darkness" while no cycle existed.
         if (
@@ -64,6 +77,8 @@ class GrowSystemStore:
             and self.data.get("active_stage") is not None
         ):
             self.data["active_stage"] = None
+            migrated = True
+        if migrated:
             await self.async_save()
 
     async def async_save(self) -> None:
