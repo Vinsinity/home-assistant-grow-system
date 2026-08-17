@@ -566,7 +566,7 @@ class GrowSystemPanel extends HTMLElement {
     if(!confirmed){this._deviceNotice="Adres değişikliğini onaylayın.";this._render();return;}if(!Number.isInteger(parsed)||parsed<0x08||parsed>0x77){this._deviceNotice="0x08–0x77 arasında geçerli bir adres girin.";this._render();return;}
     if(!confirm(`Atlas devresinin adresi 0x${Number(this._deviceSettings.address).toString(16).padStart(2,"0")} → 0x${parsed.toString(16).padStart(2,"0")} olarak değiştirilsin mi?`))return;
     this._deviceNotice="Adres değiştiriliyor; cihaz yeniden başlayacak…";this._render();
-    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/atlas_change_address",address:this._deviceSettings.address,new_address:parsed,confirmed:true});this._deviceSettings=null;this._hardwareNotice="Atlas adresi değiştirildi; entegrasyon yeniden yükleniyor…";this._render();this._refreshHardwareAfterReload();}
+    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/atlas_change_address",address:this._deviceSettings.address,new_address:parsed,confirmed:true});this._deviceSettings=null;this._hardwareNotice="Atlas adresi değiştirildi; cihaz listesi yenilendi";this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._render();}
     catch(error){this._deviceNotice=`Adres değiştirilemedi: ${error.message||error}`;this._render();}
   }
   _fluidId(name){return `fluid_${name.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,30)||Date.now()}`;}

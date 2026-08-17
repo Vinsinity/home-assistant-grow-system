@@ -54,9 +54,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     panel_path = Path(__file__).parent / "frontend" / "grow-system-panel.js"
-    await hass.http.async_register_static_paths(
-        [StaticPathConfig(PANEL_URL, str(panel_path), False)]
-    )
+    if not hass.data[DOMAIN].get("panel_static_registered"):
+        await hass.http.async_register_static_paths(
+            [StaticPathConfig(PANEL_URL, str(panel_path), False)]
+        )
+        hass.data[DOMAIN]["panel_static_registered"] = True
     await panel_custom.async_register_panel(
         hass,
         frontend_url_path=PANEL_PATH,

@@ -498,14 +498,16 @@ async def websocket_atlas_change_address(hass, connection, msg) -> None:
         else:
             raise ValueError(f"No saved assignment exists at 0x{old_address:02X}")
         await store.async_save()
+        coordinator = hass.data[DOMAIN]["atlas_i2c"]
+        await coordinator.async_reconfigure(store.data.get("hardware", {}))
+        from .sensor import async_sync_atlas_entities
+        await async_sync_atlas_entities(hass, hass.data[DOMAIN]["entry"])
     except (TypeError, ValueError, OSError, RuntimeError) as err:
         connection.send_error(msg["id"], "atlas_address_change_failed", str(err))
         return
     connection.send_result(
-        msg["id"], {"old_address": old_address, "new_address": new_address, "reloading": True}
+        msg["id"], {"old_address": old_address, "new_address": new_address, "reloading": False}
     )
-    entry = hass.data[DOMAIN]["entry"]
-    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
 
 
 def async_register(hass: HomeAssistant) -> None:
