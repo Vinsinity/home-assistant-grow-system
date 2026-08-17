@@ -214,7 +214,8 @@ class GrowSystemPanel extends HTMLElement {
     const fluids=this._hardwareDraft?.dosing_fluids||[{id:"ph_up",name:"pH+",required:true},{id:"ph_down",name:"pH−",required:true}];
     return `<ha-card class="dosing-card"><div class="dosing-head"><div><span class="eyebrow">Dozaj tesisatı</span><h2>Dozaj sıvıları ve besinler</h2><p>pH+ ve pH− zorunludur. Kullandığınız besinleri ekleyip Motor HAT kanallarında seçin.</p></div></div><div class="fluid-list">${fluids.map((fluid)=>`<div class="fluid-row"><ha-icon icon="${fluid.required?"mdi:flask":"mdi:bottle-tonic-plus-outline"}"></ha-icon><span><b>${fluid.name}</b><small>${fluid.required?"Zorunlu sistem sıvısı":"Kullanıcı tanımlı besin / katkı"}</small></span>${fluid.required?'<span class="required-badge">Zorunlu</span>':`<ha-icon-button data-remove-fluid="${fluid.id}" title="Besini kaldır"><ha-icon icon="mdi:delete-outline"></ha-icon></ha-icon-button>`}</div>`).join("")}</div><div class="fluid-add"><ha-textfield data-new-fluid-name label="Yeni besin veya katkı adı" placeholder="Örn. Besin A, CalMag"></ha-textfield><ha-button data-add-fluid appearance="filled">Ekle</ha-button></div></ha-card>`;
   }
-  _hardwareView(){return `<div class="hardware-view">${this._hardwareCard()}${this._dosingFluidsCard()}</div>`;}
+  _hardwareView(){return `<div class="hardware-view">${this._hardwareCard()}</div>`;}
+  _nutrientsView(){return `<div class="nutrients-view">${this._dosingFluidsCard()}</div>`;}
   _settingsView() {
     return `<div class="settings-grid"><ha-card header="İzleme sensörleri"><div class="card-content settings-list">
       ${this._selector("Ortam sensör cihazları","environment_devices","Shelly HT ve CO₂ cihazlarını birlikte seçin; alt entity’ler otomatik keşfedilir.")}
@@ -287,6 +288,8 @@ class GrowSystemPanel extends HTMLElement {
       if(this._deviceSettings.driver==="waveshare_motor_hat"&&!this._deviceSettings.channels)this._deviceSettings.channels=[{id:"A",name:"Motor A",fluid_id:"unassigned"},{id:"B",name:"Motor B",fluid_id:"unassigned"}];
       this._render();
     }));
+  }
+  _wireDosing(){
     this.shadowRoot.querySelector("[data-add-fluid]")?.addEventListener("click",()=>this._addDosingFluid());
     this.shadowRoot.querySelectorAll("[data-remove-fluid]").forEach((button)=>button.addEventListener("click",()=>this._removeDosingFluid(button.dataset.removeFluid)));
   }
@@ -389,11 +392,11 @@ class GrowSystemPanel extends HTMLElement {
   _render() {
     if (!this.shadowRoot) return;
     if (!this._config || !this._draft) { this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><div class="loading"><ha-circular-progress active></ha-circular-progress>Grow System yükleniyor…</div>`; return; }
-    const body=this._tab==="overview"?`${this._securityOverview()}${this._overview()}`:this._tab==="profiles"?this._profiles():this._tab==="hardware"?this._hardwareView():this._settingsView();
+    const body=this._tab==="overview"?`${this._securityOverview()}${this._overview()}`:this._tab==="profiles"?this._profiles():this._tab==="hardware"?this._hardwareView():this._tab==="nutrients"?this._nutrientsView():this._settingsView();
     const missing=this._missingSettings();
     this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><main><header><div><h1>Grow System</h1><p>Yetiştirme sistemi yönetimi</p></div><div class="system-summary"><div class="engine"><ha-icon icon="mdi:shield-check-outline"></ha-icon><span><b>Otomatik kontrol kapalı</b><small>Ekipmanlara komut gönderilmiyor</small></span></div><div class="missing ${missing.length ? "" : "complete"}"><ha-icon icon="${missing.length ? "mdi:alert-circle-outline" : "mdi:check-circle-outline"}"></ha-icon><span><b>${missing.length ? `${missing.length} ayar tamamlanmamış` : "Tüm bağlantılar hazır"}</b><small>${missing.length ? missing.join(", ") : "Eksik bağlantı yok"}</small></span></div></div></header>
       <ha-card header="Yetiştirme aşaması" class="stage-card"><div class="card-content stage-grid">${this._stageRail()}</div></ha-card>
-      <nav><button data-tab="overview" class="${this._tab==="overview"?"active":""}"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon>Genel bakış</button><button data-tab="profiles" class="${this._tab==="profiles"?"active":""}"><ha-icon icon="mdi:tune-variant"></ha-icon>Profiller</button><button data-tab="settings" class="${this._tab==="settings"?"active":""}"><ha-icon icon="mdi:cog-outline"></ha-icon>Ayarlar</button><button data-tab="hardware" class="${this._tab==="hardware"?"active":""}"><ha-icon icon="mdi:memory"></ha-icon>Donanım</button></nav>${body}</main>${this._deviceSettingsDialog()}`;
+      <nav><button data-tab="overview" class="${this._tab==="overview"?"active":""}"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon>Genel bakış</button><button data-tab="profiles" class="${this._tab==="profiles"?"active":""}"><ha-icon icon="mdi:tune-variant"></ha-icon>Profiller</button><button data-tab="settings" class="${this._tab==="settings"?"active":""}"><ha-icon icon="mdi:cog-outline"></ha-icon>Ayarlar</button><button data-tab="hardware" class="${this._tab==="hardware"?"active":""}"><ha-icon icon="mdi:memory"></ha-icon>Donanım</button><button data-tab="nutrients" class="${this._tab==="nutrients"?"active":""}"><ha-icon icon="mdi:flask-outline"></ha-icon>Besinler</button></nav>${body}</main>${this._deviceSettingsDialog()}`;
     this.shadowRoot.querySelectorAll("[data-stage]").forEach((b)=>b.onclick=()=>{this._editingStage=b.dataset.stage;this._draft={...this._config.profiles[this._editingStage]};this._render();});
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((b)=>b.onclick=()=>{this._tab=b.dataset.tab;this._notice="";this._render();});
     this.shadowRoot.querySelectorAll("[data-field]").forEach((el)=>el.addEventListener("input",(ev)=>{this._draft[ev.currentTarget.dataset.field]=Number(ev.currentTarget.value);this._notice="Kaydedilmemiş değişiklikler var";this._updateNotice();}));
@@ -402,6 +405,7 @@ class GrowSystemPanel extends HTMLElement {
     this.shadowRoot.querySelector("[data-save-settings]")?.addEventListener("click",()=>this._saveSettings());
     if(this._tab==="settings")this._wireSelectors();
     if(this._tab==="hardware"){this._wireHardware();this._wireDeviceSettings();}
+    if(this._tab==="nutrients")this._wireDosing();
   }
 
   static get styles(){return `
