@@ -2,13 +2,15 @@
 
 Home Assistant profile manager and dedicated control surface for a staged indoor grow system.
 
-## Current scope (0.8.0)
+## Current scope (0.9.0)
 
 - Optionally discovers Atlas Scientific EZO pH, EC, DO, and RTD circuits directly on Raspberry Pi I2C bus 1.
 - Creates native Home Assistant sensor entities and polls them locally every 30 seconds.
 - Shows `/dev/i2c-1` availability, discovered circuit addresses, types, and firmware in the panel Settings tab.
 - Keeps native hardware support read-only; Motor HATs and dosing pumps cannot be actuated in this release.
-- Supports automatic Atlas discovery plus persistent manual I2C addresses and a 10-300 second polling interval.
+- Separates read-only I2C discovery candidates from enrolled devices; nothing is activated until the user adds it.
+- Provides one device list plus a discovery/add pane without vendor-specific auto-enable toggles.
+- Supports persistent manual I2C addresses and a 10-300 second polling interval.
 - Exposes guarded pH, EC, DO, and RTD calibration commands after an explicit confirmation.
 - Discovers PCA9685 Motor HATs at `0x40`-`0x4f` using register reads only and lists them with outputs locked.
 

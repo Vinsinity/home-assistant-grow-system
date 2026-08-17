@@ -111,9 +111,7 @@ def _address(value) -> int:
 @websocket_api.websocket_command(
     {
         vol.Required("type"): "grow_system/hardware/save",
-        vol.Required("atlas_auto_discovery"): bool,
         vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
-        vol.Required("atlas_devices"): list,
         vol.Optional("device_assignments", default=[]): list,
     }
 )
@@ -122,28 +120,12 @@ def _address(value) -> int:
 async def websocket_save_hardware(hass, connection, msg) -> None:
     """Save native I2C preferences and reload the integration."""
     try:
-        devices = []
-        seen = set()
-        for item in msg["atlas_devices"]:
-            address = _address(item.get("address"))
-            if address in seen:
-                continue
-            seen.add(address)
-            devices.append(
-                {
-                    "address": address,
-                    "name": str(item.get("name") or f"Atlas 0x{address:02X}")[:64],
-                    "expected_type": str(item.get("expected_type") or "auto")[:16],
-                    "enabled": bool(item.get("enabled", True)),
-                }
-            )
-    except (TypeError, ValueError, AttributeError) as err:
-        connection.send_error(msg["id"], "invalid_hardware", str(err))
-        return
-    try:
         assignments = []
         assigned = set()
-        allowed_drivers = {"waveshare_motor_hat", "pca9685_generic"}
+        allowed_drivers = {
+            "waveshare_motor_hat", "pca9685_generic",
+            "atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd",
+        }
         for item in msg.get("device_assignments", []):
             address = _address(item.get("address"))
             driver = str(item.get("driver") or "")
@@ -163,9 +145,7 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
     store = hass.data[DOMAIN]["store"]
     hardware = await store.async_update_hardware(
         {
-            "atlas_auto_discovery": msg["atlas_auto_discovery"],
             "poll_interval": msg["poll_interval"],
-            "atlas_devices": devices,
             "device_assignments": assignments,
         }
     )

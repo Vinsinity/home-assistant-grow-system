@@ -45,6 +45,7 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             "error": None,
             "devices": [],
             "motor_hats": [],
+            "discovered_devices": [],
         }
 
     async def async_initialize(self) -> bool:
@@ -53,7 +54,7 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             self.diagnostic["error"] = "I2C device path is not available"
             return False
         try:
-            self.devices, motor_hats = await self.hass.async_add_executor_job(self._discover)
+            self.devices, motor_hats, discovered = await self.hass.async_add_executor_job(self._discover)
         except (OSError, ImportError) as err:
             self.diagnostic["error"] = f"{type(err).__name__}: {err}"
             return False
@@ -70,20 +71,27 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
                     for device in self.devices
                 ],
                 "motor_hats": motor_hats,
+                "discovered_devices": discovered,
             }
         )
         return bool(self.devices)
 
     def _discover(self):
-        configured = self.hardware.get("atlas_devices", [])
-        automatic = self.hardware.get("atlas_auto_discovery", True)
-        addresses = set(DEFAULT_ADDRESSES if automatic else ())
-        addresses.update(item["address"] for item in configured if item.get("enabled", True))
+        atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}
+        atlas_assignments = {
+            address: item for address, item in self.assignments.items()
+            if item.get("driver") in atlas_drivers
+        }
+        addresses = set(DEFAULT_ADDRESSES)
+        addresses.update(atlas_assignments)
         bus = AtlasEzoBus(self.bus_number)
         try:
-            devices = bus.discover(sorted(addresses))
+            atlas_candidates = bus.discover(sorted(addresses))
         finally:
             bus.close()
+        devices = [
+            device for device in atlas_candidates if device.address in atlas_assignments
+        ]
         inventory = MotorHatInventory(self.bus_number)
         try:
             hats = []
@@ -102,7 +110,24 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
                 })
         finally:
             inventory.close()
-        return devices, hats
+        discovered = [
+            {
+                "address": f"0x{device.address:02x}",
+                "chip": f"Atlas EZO {device.device_type}",
+                "suggested_driver": f"atlas_{device.device_type.lower()}",
+                "firmware": device.firmware,
+            }
+            for device in atlas_candidates
+        ] + [
+            {
+                "address": hat["address"],
+                "chip": "PCA9685",
+                "suggested_driver": "waveshare_motor_hat",
+                "firmware": None,
+            }
+            for hat in hats
+        ]
+        return devices, hats, discovered
 
     def _read_all(self) -> dict[str, dict]:
         bus = AtlasEzoBus(self.bus_number)
