@@ -224,6 +224,8 @@ class GrowSystemPanel extends HTMLElement {
       ["hydro_a","Hydro A","base"],["hydro_b","Hydro B","base"],["hydro_roots","Hydro Roots","supplement"],["green_sensation","Green Sensation","booster"],["power_buds","Power Buds","booster"],["calmag_pro","CalMag Pro","supplement"]]},
     {id:"athena",name:"Athena",products:[
       ["grow_a","Grow A","base"],["grow_b","Grow B","base"],["bloom_a","Bloom A","base"],["bloom_b","Bloom B","base"],["camg","CaMg","supplement"],["pk","PK","booster"],["cleanse","Cleanse","cleaner"],["balance","Balance","ph"],["fade","Fade","supplement"],["pro_core","Pro Core","base"],["pro_grow","Pro Grow","base"],["pro_bloom","Pro Bloom","base"]]},
+    {id:"emerald_harvest",name:"Emerald Harvest",products:[
+      ["dry_grow","Dry Grow","base"],["dry_bloom","Dry Bloom","base"],["edge","Edge","base"],["cali_pro_grow_a","Cali Pro Grow A","base"],["cali_pro_grow_b","Cali Pro Grow B","base"],["cali_pro_bloom_a","Cali Pro Bloom A","base"],["cali_pro_bloom_b","Cali Pro Bloom B","base"],["grow","Grow","base"],["micro","Micro","base"],["bloom","Bloom","base"],["emerald_goddess","Emerald Goddess","supplement"],["honey_chome","Honey Chome","supplement"],["king_kola","King Kola","booster"],["root_wizard","Root Wizard","supplement"],["sturdy_stalk","Sturdy Stalk","supplement"],["cal_mag","Cal-Mag","supplement"],["ph_up","pH Up","ph"],["ph_down","pH Down","ph"],["hydra_clear","Hydra Clear","cleaner"]]},
     {id:"custom",name:"Özel marka / ürün",products:[]}
   ];}
   _dosingFluidsCard(){
