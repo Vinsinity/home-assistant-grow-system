@@ -13,6 +13,11 @@ class GrowSystemPanel extends HTMLElement {
     this._hardwareDraft = null;
     this._newI2CDriver = "waveshare_motor_hat";
     this._selectedCandidate = null;
+    this._deviceSettings = null;
+    this._deviceNotice = "";
+    this._calibrationStatus = "";
+    this._hardwareNotice = "";
+    this._newFluidName = "";
   }
 
   set hass(value) {
@@ -191,7 +196,9 @@ class GrowSystemPanel extends HTMLElement {
       const address=`0x${Number(item.address).toString(16).padStart(2,"0")}`;
       const found=discovered.find((candidate)=>parseInt(candidate.address,16)===Number(item.address));
       const waveshare=item.driver==="waveshare_motor_hat",atlas=item.driver.startsWith("atlas_");
-      return `<div class="bus-row"><code>${address}</code><ha-icon icon="${waveshare?"mdi:engine-outline":atlas?"mdi:test-tube":"mdi:chip"}"></ha-icon><div><b>${item.name||driverLabels[item.driver]}</b><small>${driverLabels[item.driver]||item.driver}${found?` · ${found.chip}`:""}</small>${waveshare?'<div class="channel-line"><span>Motor A · PWM 0 · DIR 1/2</span><span>Motor B · PWM 5 · DIR 3/4</span></div>':""}</div><span class="status-dot ${found?"ready":"attention"}">${found?"Bağlı":"Bulunamadı"}</span><ha-icon-button data-remove-assignment="${address}" title="Cihazı kaldır"><ha-icon icon="mdi:delete-outline"></ha-icon></ha-icon-button>${atlas&&found?`<ha-icon-button data-cal-status="${address}" title="Kalibrasyon"><ha-icon icon="mdi:tune-vertical"></ha-icon></ha-icon-button>`:'<span></span>'}</div>`;
+      const channels=(item.channels||[{id:"A",name:"Motor A",fluid_id:"unassigned"},{id:"B",name:"Motor B",fluid_id:"unassigned"}]);
+      const fluids=cfg.dosing_fluids||[];
+      return `<div class="bus-row"><code>${address}</code><ha-icon icon="${waveshare?"mdi:engine-outline":atlas?"mdi:test-tube":"mdi:chip"}"></ha-icon><div><b>${item.name||driverLabels[item.driver]}</b><small>${driverLabels[item.driver]||item.driver}${found?` · ${found.chip}`:""}</small>${waveshare?`<div class="channel-line">${channels.map((channel)=>{const fluidId=channel.fluid_id||channel.role||"unassigned";const fluid=fluids.find((entry)=>entry.id===fluidId);return `<span>${channel.name} · ${fluid?.name||"Bağlantı atanmadı"}</span>`;}).join("")}</div>`:""}</div><span class="status-dot ${found?"ready":"attention"}">${found?"Bağlı":"Bulunamadı"}</span><ha-icon-button data-remove-assignment="${address}" title="Cihazı kaldır"><ha-icon icon="mdi:delete-outline"></ha-icon></ha-icon-button><ha-icon-button data-device-settings="${address}" title="Cihaz ayarları"><ha-icon icon="mdi:cog-outline"></ha-icon></ha-icon-button></div>`;
     }).join("");
     const available=discovered.filter((candidate)=>!assignments.some((item)=>Number(item.address)===parseInt(candidate.address,16)));
     const candidates=available.map((candidate)=>`<button class="candidate ${this._selectedCandidate?.address===candidate.address?"selected":""}" data-candidate-address="${candidate.address}"><code>${candidate.address}</code><span><b>${candidate.chip}</b><small>${candidate.firmware?`Firmware ${candidate.firmware}`:"Kart modelini seçerek ekleyin"}</small></span><ha-icon icon="${this._selectedCandidate?.address===candidate.address?"mdi:chevron-down":"mdi:chevron-right"}"></ha-icon></button>`).join("");
@@ -200,11 +207,16 @@ class GrowSystemPanel extends HTMLElement {
     const editor=selected?`<div class="candidate-editor"><div class="editor-address"><code>${selected.address}</code><span><b>${selected.chip}</b><small>${atlasSelected?"Model cihaz tarafından doğrulandı":"PCA9685 birden fazla kartta kullanılır; kart modelini seçin."}</small></span></div><ha-textfield data-candidate-name label="Cihaz adı" value="${selected.chip}"></ha-textfield>${atlasSelected?`<div class="locked-driver"><ha-icon icon="mdi:check-decagram-outline"></ha-icon><span><b>${driverLabels[selected.suggested_driver]}</b><small>Doğrulanmış sürücü</small></span></div>`:`<ha-selector data-candidate-driver></ha-selector>`}<ha-button data-add-candidate appearance="filled">Bu cihazı ekle</ha-button></div>`:"";
     return `<ha-card class="hardware-card"><div class="i2c-heading"><div><span class="eyebrow">Raspberry Pi · ${hw.path || "/dev/i2c-1"}</span><h2>Yerel I²C donanımı</h2><p>${hw.available ? "Veri yolu hazır; keşif yalnızca okuma yapıyor." : (hw.error || "I²C veri yolu kullanılamıyor.")}</p></div><div class="bus-health ${hw.available ? "online" : "offline"}"><span></span>${hw.available ? "Çevrimiçi" : "Çevrimdışı"}</div></div><div class="i2c-workspace">
       <section class="bus-inventory"><div class="section-head"><div><h3>Eklenen cihazlar</h3><small>${assignments.length} cihaz Grow System tarafından kullanılıyor</small></div><ha-textfield data-poll-interval label="Okuma aralığı" type="number" min="10" max="300" suffix="sn" value="${cfg.poll_interval || 30}"></ha-textfield></div>${rows || '<div class="security-empty">Henüz cihaz eklenmedi. Sağdaki keşif listesinden bir cihaz seçin.</div>'}</section>
-      <aside class="device-adder"><span class="eyebrow">Cihaz ekle</span><h3>Keşfedilen cihazlar</h3><p>Bir cihaza dokunun, modelini doğrulayın ve doğrudan ekleyin.</p><div class="candidate-list">${candidates||'<div class="candidate-empty">Eklenmemiş yeni cihaz bulunamadı.</div>'}</div>${editor}<details class="manual-add"><summary>Adresi elle ekle <small>Gelişmiş</small></summary><div><ha-textfield data-new-address label="I²C adresi" value="0x40"></ha-textfield><ha-textfield data-new-name label="Cihaz adı" value=""></ha-textfield><ha-selector data-new-driver></ha-selector><ha-button data-add-i2c>Elle ekle</ha-button></div></details><div class="inline-save"><span data-hardware-status></span></div></aside>
+      <aside class="device-adder"><span class="eyebrow">Cihaz ekle</span><h3>Keşfedilen cihazlar</h3><p>Bir cihaza dokunun, modelini doğrulayın ve doğrudan ekleyin.</p><div class="candidate-list">${candidates||'<div class="candidate-empty">Eklenmemiş yeni cihaz bulunamadı.</div>'}</div>${editor}<details class="manual-add"><summary>Adresi elle ekle <small>Gelişmiş</small></summary><div><ha-textfield data-new-address label="I²C adresi" value="0x40"></ha-textfield><ha-textfield data-new-name label="Cihaz adı" value=""></ha-textfield><ha-selector data-new-driver></ha-selector><ha-button data-add-i2c>Elle ekle</ha-button></div></details><div class="inline-save"><span data-hardware-status>${this._hardwareNotice}</span></div></aside>
       </div></ha-card>`;
   }
+  _dosingFluidsCard(){
+    const fluids=this._hardwareDraft?.dosing_fluids||[{id:"ph_up",name:"pH+",required:true},{id:"ph_down",name:"pH−",required:true}];
+    return `<ha-card class="dosing-card"><div class="dosing-head"><div><span class="eyebrow">Dozaj tesisatı</span><h2>Dozaj sıvıları ve besinler</h2><p>pH+ ve pH− zorunludur. Kullandığınız besinleri ekleyip Motor HAT kanallarında seçin.</p></div></div><div class="fluid-list">${fluids.map((fluid)=>`<div class="fluid-row"><ha-icon icon="${fluid.required?"mdi:flask":"mdi:bottle-tonic-plus-outline"}"></ha-icon><span><b>${fluid.name}</b><small>${fluid.required?"Zorunlu sistem sıvısı":"Kullanıcı tanımlı besin / katkı"}</small></span>${fluid.required?'<span class="required-badge">Zorunlu</span>':`<ha-icon-button data-remove-fluid="${fluid.id}" title="Besini kaldır"><ha-icon icon="mdi:delete-outline"></ha-icon></ha-icon-button>`}</div>`).join("")}</div><div class="fluid-add"><ha-textfield data-new-fluid-name label="Yeni besin veya katkı adı" placeholder="Örn. Besin A, CalMag"></ha-textfield><ha-button data-add-fluid appearance="filled">Ekle</ha-button></div></ha-card>`;
+  }
+  _hardwareView(){return `<div class="hardware-view">${this._hardwareCard()}${this._dosingFluidsCard()}</div>`;}
   _settingsView() {
-    return `<div class="settings-grid">${this._hardwareCard()}<ha-card header="İzleme sensörleri"><div class="card-content settings-list">
+    return `<div class="settings-grid"><ha-card header="İzleme sensörleri"><div class="card-content settings-list">
       ${this._selector("Ortam sensör cihazları","environment_devices","Shelly HT ve CO₂ cihazlarını birlikte seçin; alt entity’ler otomatik keşfedilir.")}
       ${this._selector("Besin PPM sensörü","ppm_sensor")}${this._selector("pH sensörü","ph_sensor")}${this._selector("Çözünmüş oksijen sensörü","do_sensor")}${this._selector("Su sıcaklığı sensörü","water_temperature_sensor")}${this._selector("RDWC su seviye sensörü","water_level_sensor")}
       </div></ha-card><ha-card header="Kontrol ekipmanları"><div class="card-content settings-list">
@@ -212,6 +224,20 @@ class GrowSystemPanel extends HTMLElement {
       </div></ha-card><ha-card header="Güvenlik"><div class="card-content settings-list">
       ${this._selector("Kameralar","cameras","İstediğiniz kadar kamera seçebilirsiniz.")}${this._selector("Su baskını sensörleri","leak_sensors","Islak/kuru durumunu bildiren sensörleri seçin.")}
       </div></ha-card><div class="settings-actions"><span data-status>${this._notice}</span><ha-button data-save-settings appearance="filled">Bağlantıları kaydet</ha-button></div></div>`;
+  }
+
+  _deviceSettingsDialog() {
+    const item=this._deviceSettings;
+    if(!item)return "";
+    const address=`0x${Number(item.address).toString(16).padStart(2,"0")}`;
+    const found=(this._config?.hardware?.atlas_i2c?.discovered_devices||[]).find((candidate)=>parseInt(candidate.address,16)===Number(item.address));
+    const motor=item.driver==="waveshare_motor_hat";
+    const atlas=item.driver.startsWith("atlas_");
+    const operations={atlas_ph:["low","mid","high","clear"],atlas_do:["atmospheric","zero","clear"],atlas_ec:["dry","one","low","high","clear"],atlas_rtd:["reference","clear"]};
+    const channels=item.channels||[{id:"A",name:"Motor A",fluid_id:"unassigned"},{id:"B",name:"Motor B",fluid_id:"unassigned"}];
+    const motorBody=motor?`<div class="device-note safe"><ha-icon icon="mdi:shield-lock-outline"></ha-icon><span><b>Çıkışlar donanımsal olarak kilitli</b><small>Bu ayarlar motor çalıştırmaz; yalnızca kanal adı ve bağlı dozaj sıvısını kaydeder.</small></span></div><div class="motor-channels">${channels.map((channel,index)=>`<section><div><b>Motor ${channel.id}</b><small>${channel.id==="A"?"PWM 0 · DIR 1/2":"PWM 5 · DIR 3/4"}</small></div><ha-textfield data-channel-name="${index}" label="Kanal adı" value="${channel.name}"></ha-textfield><ha-selector data-channel-fluid="${index}"></ha-selector></section>`).join("")}</div>`:"";
+    const atlasBody=atlas?`<div class="device-facts"><span><small>Firmware</small><b>${found?.firmware||"Bilinmiyor"}</b></span><span><small>Kalibrasyon durumu</small><b>${this._calibrationStatus||"Henüz okunmadı"}</b></span><ha-button data-read-calibration appearance="plain">Durumu oku</ha-button></div><div class="calibration-box"><h3>Yönlendirmeli kalibrasyon</h3><p>Probu doğru referans ortamına yerleştirin, ölçümün kararlı olmasını bekleyin ve işlemi açıkça onaylayın.</p><ha-selector data-cal-operation></ha-selector><ha-textfield data-cal-value label="Referans değeri (gerekiyorsa)" type="number" step="0.01"></ha-textfield><label><ha-checkbox data-cal-confirm></ha-checkbox><span>Prob doğru referans ortamında ve ölçüm kararlı</span></label><ha-button data-run-calibration appearance="filled">Kalibrasyonu uygula</ha-button></div>`:"";
+    return `<div class="dialog-scrim" data-dialog-scrim><div class="device-dialog" role="dialog" aria-modal="true" aria-label="Cihaz ayarları"><div class="dialog-head"><div><span class="eyebrow">${address} · ${item.driver}</span><h2>Cihaz ayarları</h2></div><ha-icon-button data-close-device-dialog title="Kapat"><ha-icon icon="mdi:close"></ha-icon></ha-icon-button></div><div class="dialog-body"><ha-textfield data-device-name label="Cihaz adı" value="${item.name||""}"></ha-textfield>${motorBody}${atlasBody}<div class="device-message" data-device-message>${this._deviceNotice}</div></div><div class="dialog-actions"><ha-button data-close-device-dialog appearance="plain">Vazgeç</ha-button><ha-button data-save-device appearance="filled">Ayarları kaydet</ha-button></div></div></div>`;
   }
 
   _selectorConfig(key) {
@@ -254,7 +280,15 @@ class GrowSystemPanel extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-candidate-address]").forEach((button)=>button.addEventListener("click",()=>{const candidate=(this._config.hardware.atlas_i2c.discovered_devices||[]).find((item)=>item.address===button.dataset.candidateAddress);this._selectedCandidate=this._selectedCandidate?.address===candidate.address?null:candidate;this._newI2CDriver=candidate.suggested_driver;this._render();}));
     this.shadowRoot.querySelector("[data-add-candidate]")?.addEventListener("click",()=>{const name=this.shadowRoot.querySelector("[data-candidate-name]")?.value?.trim();this._enrollI2C(parseInt(this._selectedCandidate.address,16),name||this._selectedCandidate.chip,this._selectedCandidate.suggested_driver.startsWith("atlas_")?this._selectedCandidate.suggested_driver:this._newI2CDriver);});
     this.shadowRoot.querySelectorAll("[data-remove-assignment]").forEach((button) => button.addEventListener("click", () => {const address=parseInt(button.dataset.removeAssignment,16);this._hardwareDraft.device_assignments=(this._hardwareDraft.device_assignments||[]).filter((item)=>Number(item.address)!==address);this._saveHardware();}));
-    this.shadowRoot.querySelectorAll("[data-cal-status]").forEach((button) => button.addEventListener("click", () => this._calibration(button.dataset.calStatus)));
+    this.shadowRoot.querySelectorAll("[data-device-settings]").forEach((button) => button.addEventListener("click", () => {
+      const address=parseInt(button.dataset.deviceSettings,16);
+      const assignment=(this._hardwareDraft.device_assignments||[]).find((entry)=>Number(entry.address)===address);
+      this._deviceSettings=JSON.parse(JSON.stringify(assignment));this._deviceNotice="";this._calibrationStatus="";
+      if(this._deviceSettings.driver==="waveshare_motor_hat"&&!this._deviceSettings.channels)this._deviceSettings.channels=[{id:"A",name:"Motor A",fluid_id:"unassigned"},{id:"B",name:"Motor B",fluid_id:"unassigned"}];
+      this._render();
+    }));
+    this.shadowRoot.querySelector("[data-add-fluid]")?.addEventListener("click",()=>this._addDosingFluid());
+    this.shadowRoot.querySelectorAll("[data-remove-fluid]").forEach((button)=>button.addEventListener("click",()=>this._removeDosingFluid(button.dataset.removeFluid)));
   }
   _updateDriverNote(){const notes={waveshare_motor_hat:"İki çıkış: Motor A ve Motor B. Adres aralığı 0x40–0x5F.",atlas_do:"Atlas EZO çözünmüş oksijen devresi.",atlas_ph:"Atlas EZO pH devresi.",atlas_ec:"Atlas EZO iletkenlik ve TDS devresi.",atlas_rtd:"Atlas EZO RTD su sıcaklığı devresi.",pca9685_generic:"Genel 16 kanallı PCA9685; motor eşlemesi uygulanmaz."};const el=this.shadowRoot.querySelector("[data-driver-note]");if(el)el.textContent=notes[this._newI2CDriver]||"";}
   _addI2CDevice(){
@@ -268,29 +302,75 @@ class GrowSystemPanel extends HTMLElement {
   _enrollI2C(address,name,driver){
     this._hardwareDraft.device_assignments ||= [];
     this._hardwareDraft.device_assignments=this._hardwareDraft.device_assignments.filter((item)=>Number(item.address)!==address);
-    this._hardwareDraft.device_assignments.push({address,driver,name});
+    const assignment={address,driver,name};
+    if(driver==="waveshare_motor_hat")assignment.channels=[{id:"A",name:"Motor A",fluid_id:"unassigned"},{id:"B",name:"Motor B",fluid_id:"unassigned"}];
+    this._hardwareDraft.device_assignments.push(assignment);
     this._selectedCandidate=null;this._saveHardware();
   }
   async _saveHardware() {
-    const status=this.shadowRoot.querySelector("[data-hardware-status]"); if(status)status.textContent="Kaydediliyor…";
+    this._hardwareNotice="Kaydediliyor…";const status=this.shadowRoot.querySelector("[data-hardware-status]"); if(status)status.textContent=this._hardwareNotice;
     try {
-      const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[]});
-      if(result.reloading){if(status)status.textContent="Sensör entity’leri hazırlanıyor…";setTimeout(()=>{this._config=null;this._loading=false;this._load();},2500);}
-      else{this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));if(status)status.textContent="Cihaz eklendi";this._render();}
-    } catch(error) { if(status)status.textContent=`Kaydedilemedi: ${error.message||error}`; }
+      const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[],dosing_fluids:this._hardwareDraft.dosing_fluids||[]});
+      if(result.reloading){this._hardwareNotice="Sensör entity’leri arka planda hazırlanıyor…";this._render();this._refreshHardwareAfterReload();}
+      else{this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._hardwareNotice="Ayarlar kaydedildi";this._render();}
+    } catch(error) { this._hardwareNotice=`Kaydedilemedi: ${error.message||error}`;if(status)status.textContent=this._hardwareNotice; }
   }
-  async _calibration(address) {
-    try {
-      const current=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibration_status",address});
-      const operation=prompt(`Kalibrasyon durumu: ${current.status}\n\nİşlem yazın (iptal için boş bırakın):\npH: low, mid, high\nDO: atmospheric, zero\nEC: dry, one, low, high\nRTD: reference\nTümü: clear`);
-      if(!operation)return;
-      const needsValue=["low","mid","high","one","reference"].includes(operation);
-      const value=needsValue?Number(prompt("Referans değerini girin:")):undefined;
-      if(needsValue&&!Number.isFinite(value))throw new Error("Geçerli referans değeri girilmedi");
-      if(!confirm(`${address} adresine ${operation}${needsValue?` (${value})`:""} kalibrasyonu yazılacak. Prob doğru referans sıvısında mı?`))return;
-      await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibrate",address,operation,value,confirmed:true});
-      alert("Kalibrasyon komutu tamamlandı.");
-    } catch(error){alert(`Kalibrasyon başarısız: ${error.message||error}`);}
+  async _refreshHardwareAfterReload() {
+    for(let attempt=0;attempt<12;attempt++){
+      await new Promise((resolve)=>setTimeout(resolve,750));
+      try{
+        const config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});
+        this._config=config;this._hardwareDraft=JSON.parse(JSON.stringify(config.hardware_config));
+        this._hardwareNotice="Cihaz hazır";this._deviceNotice="";this._render();return;
+      }catch(_){/* Integration is briefly unavailable while entities are recreated. */}
+    }
+    this._hardwareNotice="Cihaz kaydedildi; entity yenilemesi sürüyor. Biraz sonra tekrar kontrol edin.";this._render();
+  }
+  _wireDeviceSettings(){
+    if(!this._deviceSettings)return;
+    this.shadowRoot.querySelectorAll("[data-close-device-dialog]").forEach((el)=>el.addEventListener("click",()=>{this._deviceSettings=null;this._render();}));
+    this.shadowRoot.querySelector("[data-dialog-scrim]")?.addEventListener("click",(event)=>{if(event.target===event.currentTarget){this._deviceSettings=null;this._render();}});
+    const fluids=[{value:"unassigned",label:"Bağlantı atanmadı"},...(this._hardwareDraft.dosing_fluids||[]).map((fluid)=>({value:fluid.id,label:fluid.name}))];
+    const channels=this._deviceSettings.channels||[];
+    this.shadowRoot.querySelectorAll("[data-channel-name]").forEach((field)=>field.addEventListener("input",()=>{channels[Number(field.dataset.channelName)].name=field.value;}));
+    this.shadowRoot.querySelectorAll("[data-channel-fluid]").forEach((picker)=>{const index=Number(picker.dataset.channelFluid);picker.hass=this._hass;picker.selector={select:{options:fluids,mode:"dropdown"}};picker.value=channels[index].fluid_id||channels[index].role||"unassigned";picker.addEventListener("value-changed",(event)=>{channels[index].fluid_id=event.detail.value;delete channels[index].role;});});
+    const operations={atlas_ph:["low","mid","high","clear"],atlas_do:["atmospheric","zero","clear"],atlas_ec:["dry","one","low","high","clear"],atlas_rtd:["reference","clear"]}[this._deviceSettings.driver]||[];
+    const operation=this.shadowRoot.querySelector("[data-cal-operation]");if(operation){operation.hass=this._hass;operation.selector={select:{options:operations.map((value)=>({value,label:value})),mode:"dropdown"}};operation.value=operations[0];}
+    this.shadowRoot.querySelector("[data-read-calibration]")?.addEventListener("click",()=>this._readCalibration());
+    this.shadowRoot.querySelector("[data-run-calibration]")?.addEventListener("click",()=>this._runCalibration());
+    this.shadowRoot.querySelector("[data-save-device]")?.addEventListener("click",()=>this._saveDeviceSettings());
+  }
+  async _saveDeviceSettings(){
+    this._deviceSettings.name=this.shadowRoot.querySelector("[data-device-name]")?.value?.trim()||this._deviceSettings.name;
+    const index=(this._hardwareDraft.device_assignments||[]).findIndex((item)=>Number(item.address)===Number(this._deviceSettings.address));
+    if(index>=0)this._hardwareDraft.device_assignments[index]=JSON.parse(JSON.stringify(this._deviceSettings));
+    this._deviceSettings=null;await this._saveHardware();
+  }
+  _fluidId(name){return `fluid_${name.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,30)||Date.now()}`;}
+  _addDosingFluid(){
+    const field=this.shadowRoot.querySelector("[data-new-fluid-name]");const name=field?.value?.trim();
+    if(!name){this._hardwareNotice="Besin veya katkı adı girin.";this._render();return;}
+    this._hardwareDraft.dosing_fluids||=[];let id=this._fluidId(name),suffix=2;while(this._hardwareDraft.dosing_fluids.some((fluid)=>fluid.id===id))id=`${this._fluidId(name)}_${suffix++}`;
+    this._hardwareDraft.dosing_fluids.push({id,name,required:false});this._saveHardware();
+  }
+  _removeDosingFluid(id){
+    const used=(this._hardwareDraft.device_assignments||[]).some((item)=>(item.channels||[]).some((channel)=>(channel.fluid_id||channel.role)===id));
+    if(used){this._hardwareNotice="Bu besin bir motor kanalına bağlı. Önce kanal bağlantısını kaldırın.";this._render();return;}
+    this._hardwareDraft.dosing_fluids=(this._hardwareDraft.dosing_fluids||[]).filter((fluid)=>fluid.id!==id||fluid.required);this._saveHardware();
+  }
+  async _readCalibration(){
+    try{const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibration_status",address:this._deviceSettings.address});this._calibrationStatus=result.status;this._deviceNotice="Kalibrasyon durumu okundu";this._render();}
+    catch(error){this._deviceNotice=`Durum okunamadı: ${error.message||error}`;this._render();}
+  }
+  async _runCalibration(){
+    const operation=this.shadowRoot.querySelector("[data-cal-operation]")?.value;
+    const confirmed=this.shadowRoot.querySelector("[data-cal-confirm]")?.checked;
+    const valueText=this.shadowRoot.querySelector("[data-cal-value]")?.value;
+    const needsValue=["low","mid","high","one","reference"].includes(operation);
+    if(!confirmed){this._deviceNotice="Önce probun doğru referans ortamında olduğunu onaylayın.";this._render();return;}
+    if(needsValue&&!Number.isFinite(Number(valueText))){this._deviceNotice="Bu işlem için geçerli bir referans değeri girin.";this._render();return;}
+    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibrate",address:this._deviceSettings.address,operation,value:needsValue?Number(valueText):undefined,confirmed:true});this._deviceNotice="Kalibrasyon komutu tamamlandı";await this._readCalibration();}
+    catch(error){this._deviceNotice=`Kalibrasyon başarısız: ${error.message||error}`;this._render();}
   }
 
   async _saveProfile() {
@@ -309,18 +389,19 @@ class GrowSystemPanel extends HTMLElement {
   _render() {
     if (!this.shadowRoot) return;
     if (!this._config || !this._draft) { this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><div class="loading"><ha-circular-progress active></ha-circular-progress>Grow System yükleniyor…</div>`; return; }
-    const body=this._tab==="overview"?`${this._securityOverview()}${this._overview()}`:this._tab==="profiles"?this._profiles():this._settingsView();
+    const body=this._tab==="overview"?`${this._securityOverview()}${this._overview()}`:this._tab==="profiles"?this._profiles():this._tab==="hardware"?this._hardwareView():this._settingsView();
     const missing=this._missingSettings();
     this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><main><header><div><h1>Grow System</h1><p>Yetiştirme sistemi yönetimi</p></div><div class="system-summary"><div class="engine"><ha-icon icon="mdi:shield-check-outline"></ha-icon><span><b>Otomatik kontrol kapalı</b><small>Ekipmanlara komut gönderilmiyor</small></span></div><div class="missing ${missing.length ? "" : "complete"}"><ha-icon icon="${missing.length ? "mdi:alert-circle-outline" : "mdi:check-circle-outline"}"></ha-icon><span><b>${missing.length ? `${missing.length} ayar tamamlanmamış` : "Tüm bağlantılar hazır"}</b><small>${missing.length ? missing.join(", ") : "Eksik bağlantı yok"}</small></span></div></div></header>
       <ha-card header="Yetiştirme aşaması" class="stage-card"><div class="card-content stage-grid">${this._stageRail()}</div></ha-card>
-      <nav><button data-tab="overview" class="${this._tab==="overview"?"active":""}"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon>Genel bakış</button><button data-tab="profiles" class="${this._tab==="profiles"?"active":""}"><ha-icon icon="mdi:tune-variant"></ha-icon>Profiller</button><button data-tab="settings" class="${this._tab==="settings"?"active":""}"><ha-icon icon="mdi:cog-outline"></ha-icon>Ayarlar</button></nav>${body}</main>`;
+      <nav><button data-tab="overview" class="${this._tab==="overview"?"active":""}"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon>Genel bakış</button><button data-tab="profiles" class="${this._tab==="profiles"?"active":""}"><ha-icon icon="mdi:tune-variant"></ha-icon>Profiller</button><button data-tab="settings" class="${this._tab==="settings"?"active":""}"><ha-icon icon="mdi:cog-outline"></ha-icon>Ayarlar</button><button data-tab="hardware" class="${this._tab==="hardware"?"active":""}"><ha-icon icon="mdi:memory"></ha-icon>Donanım</button></nav>${body}</main>${this._deviceSettingsDialog()}`;
     this.shadowRoot.querySelectorAll("[data-stage]").forEach((b)=>b.onclick=()=>{this._editingStage=b.dataset.stage;this._draft={...this._config.profiles[this._editingStage]};this._render();});
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((b)=>b.onclick=()=>{this._tab=b.dataset.tab;this._notice="";this._render();});
     this.shadowRoot.querySelectorAll("[data-field]").forEach((el)=>el.addEventListener("input",(ev)=>{this._draft[ev.currentTarget.dataset.field]=Number(ev.currentTarget.value);this._notice="Kaydedilmemiş değişiklikler var";this._updateNotice();}));
     this.shadowRoot.querySelector("[data-save-profile]")?.addEventListener("click",()=>this._saveProfile());
     this.shadowRoot.querySelector("[data-activate]")?.addEventListener("click",()=>this._activate());
     this.shadowRoot.querySelector("[data-save-settings]")?.addEventListener("click",()=>this._saveSettings());
-    if(this._tab==="settings"){this._wireSelectors();this._wireHardware();}
+    if(this._tab==="settings")this._wireSelectors();
+    if(this._tab==="hardware"){this._wireHardware();this._wireDeviceSettings();}
   }
 
   static get styles(){return `
@@ -328,7 +409,9 @@ class GrowSystemPanel extends HTMLElement {
     .system-summary{display:flex;align-items:center;gap:24px}.missing{display:flex;align-items:center;gap:10px;max-width:420px}.missing>ha-icon{flex:0 0 auto;color:var(--warning-color,#ff9800)}.missing.complete>ha-icon{color:var(--success-color,#43a047)}.missing span,.missing small{display:block}.missing b{font-size:14px;font-weight:500}.missing small{margin-top:3px;color:var(--secondary-text-color);font-size:11px;line-height:1.35}.security-card{margin:0 0 16px}.camera-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.water-level{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;margin-top:12px;padding:12px;border:1px solid var(--divider-color);border-radius:10px}.water-level>ha-icon{color:var(--primary-color)}.water-level span,.water-level small{display:block}.water-level small{margin-top:3px;color:var(--secondary-text-color);font-size:11px}.water-level strong{font-size:16px;font-weight:500}.water-level.unknown>ha-icon{color:var(--warning-color,#ff9800)}
     .hardware-title{margin-top:24px}.hardware-device{display:grid;grid-template-columns:24px 1fr auto}.safe-badge{padding:4px 8px;border-radius:12px;color:var(--success-color,#43a047);background:color-mix(in srgb,var(--success-color,#43a047) 12%,transparent);font-size:11px}.hardware-options{display:grid;grid-template-columns:1fr 180px;align-items:center;gap:24px;margin:20px 0}.hardware-options label{display:flex;align-items:center;gap:12px}.manual-device{display:grid;grid-template-columns:1fr 150px 220px 44px;align-items:center;gap:8px;margin:8px 0}.hardware-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;padding-top:16px;border-top:1px solid var(--divider-color)}
     .i2c-heading{display:flex;align-items:center;justify-content:space-between;padding:24px 28px;border-bottom:1px solid var(--divider-color)}.i2c-heading h2{margin:4px 0;font-size:22px;font-weight:500}.i2c-heading p{margin:0;color:var(--secondary-text-color);font-size:13px}.eyebrow{color:var(--secondary-text-color);font:600 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase}.bus-health{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500}.bus-health>span{width:8px;height:8px;border-radius:50%;background:var(--error-color)}.bus-health.online>span{background:var(--success-color,#43a047);box-shadow:0 0 0 4px color-mix(in srgb,var(--success-color,#43a047) 12%,transparent)}.i2c-workspace{display:grid;grid-template-columns:minmax(0,2fr) minmax(320px,1fr)}.bus-inventory{padding:24px 28px;border-right:1px solid var(--divider-color)}.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.section-head h3,.device-adder h3{margin:0 0 3px;font-size:16px}.section-head small{color:var(--secondary-text-color)}.section-head ha-textfield{width:150px}.bus-row{display:grid;grid-template-columns:62px 28px minmax(0,1fr) auto 40px 40px;align-items:center;gap:8px;min-height:68px;padding:10px 4px;border-top:1px solid var(--divider-color)}.bus-row code,.candidate code,.editor-address code{color:var(--primary-color);font:600 12px ui-monospace,SFMono-Regular,Menlo,monospace}.bus-row>ha-icon{color:var(--state-icon-color)}.bus-row b,.bus-row small{display:block}.bus-row b{font-size:14px;font-weight:500}.bus-row small{margin-top:3px;color:var(--secondary-text-color);font-size:11px}.channel-line{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.channel-line span{padding:3px 7px;border:1px solid var(--divider-color);border-radius:4px;color:var(--secondary-text-color);font:10px ui-monospace,SFMono-Regular,Menlo,monospace}.status-dot{display:flex;align-items:center;gap:6px;color:var(--secondary-text-color);font-size:11px}.status-dot:before{width:7px;height:7px;border-radius:50%;background:currentColor;content:""}.status-dot.ready{color:var(--success-color,#43a047)}.status-dot.attention{color:var(--warning-color,#ff9800)}.device-adder{padding:24px;background:color-mix(in srgb,var(--secondary-background-color) 55%,transparent)}.device-adder>p{margin:5px 0 16px;color:var(--secondary-text-color);font-size:12px;line-height:1.45}.candidate-list{display:grid;gap:6px;max-height:280px;overflow:auto}.candidate{display:grid;grid-template-columns:52px 1fr 20px;align-items:center;gap:8px;width:100%;padding:10px;border:1px solid var(--divider-color);border-radius:7px;color:var(--primary-text-color);background:var(--card-background-color);text-align:left;cursor:pointer}.candidate:hover,.candidate.selected{border-color:var(--primary-color);background:var(--secondary-background-color)}.candidate span,.candidate small{display:block}.candidate b{font-size:12px;font-weight:500}.candidate small,.candidate-empty{margin-top:3px;color:var(--secondary-text-color);font-size:10px}.candidate ha-icon{--mdc-icon-size:17px;color:var(--secondary-text-color)}.candidate-empty{padding:16px;text-align:center}.candidate-editor{display:grid;gap:12px;margin-top:10px;padding:14px;border:1px solid var(--primary-color);border-radius:8px;background:var(--card-background-color)}.editor-address,.locked-driver{display:grid;grid-template-columns:48px 1fr;align-items:center;gap:10px}.editor-address span,.editor-address small,.locked-driver span,.locked-driver small{display:block}.editor-address b,.locked-driver b{font-size:12px}.editor-address small,.locked-driver small{margin-top:2px;color:var(--secondary-text-color);font-size:10px}.locked-driver{grid-template-columns:24px 1fr;padding:9px;background:var(--secondary-background-color);border-radius:6px}.locked-driver ha-icon{--mdc-icon-size:18px;color:var(--success-color,#43a047)}.device-adder ha-textfield,.device-adder ha-selector{display:block;width:100%;margin-bottom:12px}.manual-add{margin-top:18px;border-top:1px solid var(--divider-color)}.manual-add summary{display:flex;align-items:center;justify-content:space-between;padding:14px 0;color:var(--secondary-text-color);font-size:12px;cursor:pointer}.manual-add summary small{font-size:9px;text-transform:uppercase}.manual-add>div{padding-top:4px}.inline-save{min-height:18px;margin-top:10px;color:var(--secondary-text-color);font-size:11px}.hardware-card>.hardware-actions{margin:0;padding:12px 28px}.hardware-card>.hardware-actions span{color:var(--secondary-text-color);font-size:12px}
-    @media(max-width:900px){.stage-grid{overflow-x:auto;grid-template-columns:repeat(5,minmax(145px,1fr))}.metric-grid,.settings-grid{grid-template-columns:1fr}.settings-actions{grid-column:1}.fields{grid-template-columns:repeat(2,1fr)}.camera-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.system-summary{align-items:flex-start;flex-direction:column;gap:12px}.i2c-workspace{grid-template-columns:1fr}.bus-inventory{border-right:0;border-bottom:1px solid var(--divider-color)}}@media(max-width:650px){main{padding:16px 8px 32px}header{align-items:flex-start;flex-direction:column}.setting{grid-template-columns:1fr;gap:10px}.fields,.fields.three{grid-template-columns:1fr}nav button{flex:1;justify-content:center;padding:12px 6px}.card-actions{align-items:stretch;flex-direction:column}.camera-grid{grid-template-columns:1fr}.i2c-heading,.section-head{align-items:flex-start;flex-direction:column;gap:12px}.bus-inventory,.device-adder{padding:18px}.bus-row{grid-template-columns:50px 24px minmax(0,1fr) 36px 36px}.bus-row .status-dot{display:none}.channel-line{display:none}}
+    .dialog-scrim{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:20px;background:rgba(0,0,0,.58)}.device-dialog{width:min(760px,100%);max-height:min(860px,calc(100vh - 40px));overflow:auto;border-radius:14px;color:var(--primary-text-color);background:var(--card-background-color);box-shadow:0 18px 55px rgba(0,0,0,.4)}.dialog-head,.dialog-actions{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--divider-color)}.dialog-head h2{margin:3px 0 0;font-size:22px}.dialog-body{display:grid;gap:18px;padding:22px}.dialog-actions{justify-content:flex-end;gap:8px;border-top:1px solid var(--divider-color);border-bottom:0}.device-note{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:8px;background:var(--secondary-background-color)}.device-note.safe ha-icon{color:var(--success-color,#43a047)}.device-note span,.device-note small{display:block}.device-note small{margin-top:4px;color:var(--secondary-text-color);font-size:12px}.motor-channels{display:grid;gap:10px}.motor-channels section{display:grid;grid-template-columns:130px 1fr 1fr;align-items:center;gap:12px;padding:12px;border:1px solid var(--divider-color);border-radius:9px}.motor-channels section b,.motor-channels section small{display:block}.motor-channels section small{margin-top:3px;color:var(--secondary-text-color);font-size:11px}.device-facts{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:12px;padding:12px;border:1px solid var(--divider-color);border-radius:9px}.device-facts span,.device-facts small{display:block}.device-facts small{color:var(--secondary-text-color);font-size:11px}.calibration-box{display:grid;gap:12px;padding:16px;border:1px solid var(--divider-color);border-radius:9px}.calibration-box h3{margin:0;font-size:16px}.calibration-box p{margin:0;color:var(--secondary-text-color);font-size:12px;line-height:1.5}.calibration-box label{display:flex;align-items:center;gap:8px;font-size:12px}.device-message{min-height:18px;color:var(--secondary-text-color);font-size:12px}
+    .hardware-view{display:grid;gap:16px}.dosing-card{padding:24px 28px}.dosing-head{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--divider-color)}.dosing-head h2{margin:4px 0;font-size:20px}.dosing-head p{margin:0;color:var(--secondary-text-color);font-size:12px}.fluid-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;padding:18px 0}.fluid-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--divider-color);border-radius:8px}.fluid-row>ha-icon{color:var(--state-icon-color)}.fluid-row span,.fluid-row small{display:block}.fluid-row small{margin-top:3px;color:var(--secondary-text-color);font-size:11px}.required-badge{padding:4px 7px;border-radius:10px;color:var(--primary-color);background:color-mix(in srgb,var(--primary-color) 12%,transparent);font-size:10px}.fluid-add{display:grid;grid-template-columns:minmax(240px,420px) auto;align-items:center;gap:10px;padding-top:16px;border-top:1px solid var(--divider-color)}
+    @media(max-width:900px){.stage-grid{overflow-x:auto;grid-template-columns:repeat(5,minmax(145px,1fr))}.metric-grid,.settings-grid{grid-template-columns:1fr}.settings-actions{grid-column:1}.fields{grid-template-columns:repeat(2,1fr)}.camera-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.system-summary{align-items:flex-start;flex-direction:column;gap:12px}.i2c-workspace{grid-template-columns:1fr}.bus-inventory{border-right:0;border-bottom:1px solid var(--divider-color)}.motor-channels section{grid-template-columns:1fr 1fr}.motor-channels section>div{grid-column:1/-1}}@media(max-width:650px){main{padding:16px 8px 32px}header{align-items:flex-start;flex-direction:column}.setting{grid-template-columns:1fr;gap:10px}.fields,.fields.three{grid-template-columns:1fr}nav button{flex:1;justify-content:center;padding:12px 6px}.card-actions{align-items:stretch;flex-direction:column}.camera-grid{grid-template-columns:1fr}.i2c-heading,.section-head{align-items:flex-start;flex-direction:column;gap:12px}.bus-inventory,.device-adder{padding:18px}.bus-row{grid-template-columns:50px 24px minmax(0,1fr) 36px 36px}.bus-row .status-dot{display:none}.channel-line{display:none}.motor-channels section,.device-facts{grid-template-columns:1fr}.motor-channels section>div{grid-column:auto}.dialog-body{padding:16px}}
   `;}
 }
 if(!customElements.get("grow-system-panel"))customElements.define("grow-system-panel",GrowSystemPanel);

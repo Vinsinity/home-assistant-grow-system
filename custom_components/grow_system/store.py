@@ -26,6 +26,10 @@ class GrowSystemStore:
                 "i2c_bus": 1,
                 "poll_interval": 30,
                 "device_assignments": [],
+                "dosing_fluids": [
+                    {"id": "ph_up", "name": "pH+", "required": True},
+                    {"id": "ph_down", "name": "pH−", "required": True},
+                ],
             },
         }
 

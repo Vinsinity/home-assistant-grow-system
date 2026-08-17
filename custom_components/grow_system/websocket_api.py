@@ -76,22 +76,6 @@ async def websocket_save_entities(hass, connection, msg) -> None:
 async def websocket_save_profile(hass, connection, msg) -> None:
     """Save one stage profile."""
     store = hass.data[DOMAIN]["store"]
-    previous = store.data.get("hardware", {})
-    atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}
-    previous_atlas = {
-        (item.get("address"), item.get("driver"))
-        for item in previous.get("device_assignments", [])
-        if item.get("driver") in atlas_drivers
-    }
-    next_atlas = {
-        (item.get("address"), item.get("driver"))
-        for item in assignments
-        if item.get("driver") in atlas_drivers
-    }
-    reload_required = (
-        previous_atlas != next_atlas
-        or int(previous.get("poll_interval", 30)) != msg["poll_interval"]
-    )
     try:
         profile = await store.async_update_profile(msg["stage"], msg["values"])
     except ValueError as err:
@@ -129,6 +113,7 @@ def _address(value) -> int:
         vol.Required("type"): "grow_system/hardware/save",
         vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
         vol.Optional("device_assignments", default=[]): list,
+        vol.Optional("dosing_fluids", default=[]): list,
     }
 )
 @websocket_api.require_admin
@@ -142,6 +127,23 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             "waveshare_motor_hat", "pca9685_generic",
             "atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd",
         }
+        dosing_fluids = [
+            {"id": "ph_up", "name": "pH+", "required": True},
+            {"id": "ph_down", "name": "pH−", "required": True},
+        ]
+        fluid_ids = {"ph_up", "ph_down"}
+        for fluid in msg.get("dosing_fluids", []):
+            fluid_id = str(fluid.get("id") or "")[:48]
+            if not fluid_id or fluid_id in fluid_ids:
+                continue
+            if not fluid_id.replace("_", "").isalnum():
+                raise ValueError(f"Invalid dosing fluid id: {fluid_id}")
+            fluid_ids.add(fluid_id)
+            dosing_fluids.append({
+                "id": fluid_id,
+                "name": str(fluid.get("name") or fluid_id)[:64],
+                "required": False,
+            })
         for item in msg.get("device_assignments", []):
             address = _address(item.get("address"))
             driver = str(item.get("driver") or "")
@@ -150,11 +152,32 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             if address in assigned:
                 continue
             assigned.add(address)
-            assignments.append({
+            assignment = {
                 "address": address,
                 "driver": driver,
                 "name": str(item.get("name") or f"I2C 0x{address:02X}")[:64],
-            })
+            }
+            if driver == "waveshare_motor_hat":
+                incoming_channels = {
+                    str(channel.get("id", "")).upper(): channel
+                    for channel in item.get("channels", [])
+                    if isinstance(channel, dict)
+                }
+                channels = []
+                for channel_id in ("A", "B"):
+                    channel = incoming_channels.get(channel_id, {})
+                    fluid_id = str(
+                        channel.get("fluid_id") or channel.get("role") or "unassigned"
+                    )
+                    if fluid_id != "unassigned" and fluid_id not in fluid_ids:
+                        raise ValueError(f"Unknown dosing fluid: {fluid_id}")
+                    channels.append({
+                        "id": channel_id,
+                        "name": str(channel.get("name") or f"Motor {channel_id}")[:64],
+                        "fluid_id": fluid_id,
+                    })
+                assignment["channels"] = channels
+            assignments.append(assignment)
     except (TypeError, ValueError, AttributeError) as err:
         connection.send_error(msg["id"], "invalid_assignment", str(err))
         return
@@ -179,6 +202,7 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
         {
             "poll_interval": msg["poll_interval"],
             "device_assignments": assignments,
+            "dosing_fluids": dosing_fluids,
         }
     )
     connection.send_result(
