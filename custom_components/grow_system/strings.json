@@ -7,11 +7,14 @@
         "description": "Select one or more environmental sensor devices. Grow System discovers CO2, temperature, and humidity entities below each device automatically and calculates VPD.",
         "data": {
           "environment_devices": "Environmental sensor devices",
+          "temperature_sensors": "Temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "co2_sensors": "CO2 sensors",
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",
-          "water_temperature_sensor": "Water temperature sensor",
-          "water_level_sensor": "RDWC water level sensor"
+          "water_temperature_sensor": "Water temperature sensors",
+          "water_level_sensor": "Water level sensors"
         }
       },
       "controls": {
@@ -22,9 +25,10 @@
           "co2_valve": "CO2 solenoid valve",
           "exhaust_fan": "Exhaust fan",
           "inline_fan": "Inline fan",
-          "rdwc_pump": "RDWC circulation pump",
+          "rdwc_pump": "Water circulation pump",
           "climate": "Air conditioner",
           "dehumidifier": "Dehumidifier",
+          "humidifier": "Humidifier",
           "chiller": "Water chiller"
         }
       }
@@ -40,11 +44,14 @@
         "description": "Select environmental sensor devices. Their CO2, temperature, and humidity entities are discovered automatically.",
         "data": {
           "environment_devices": "Environmental sensor devices",
+          "temperature_sensors": "Temperature sensors",
+          "humidity_sensors": "Humidity sensors",
+          "co2_sensors": "CO2 sensors",
           "ppm_sensor": "Nutrient PPM sensor",
           "ph_sensor": "pH sensor",
           "do_sensor": "Dissolved oxygen sensor",
-          "water_temperature_sensor": "Water temperature sensor",
-          "water_level_sensor": "RDWC water level sensor"
+          "water_temperature_sensor": "Water temperature sensors",
+          "water_level_sensor": "Water level sensors"
         }
       },
       "controls": {
@@ -55,9 +62,10 @@
           "co2_valve": "CO2 solenoid valve",
           "exhaust_fan": "Exhaust fan",
           "inline_fan": "Inline fan",
-          "rdwc_pump": "RDWC circulation pump",
+          "rdwc_pump": "Water circulation pump",
           "climate": "Air conditioner",
           "dehumidifier": "Dehumidifier",
+          "humidifier": "Humidifier",
           "chiller": "Water chiller"
         }
       }

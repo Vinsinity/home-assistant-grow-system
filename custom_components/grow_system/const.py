@@ -20,6 +20,7 @@ CONF_INLINE_FAN = "inline_fan"
 CONF_RDWC_PUMP = "rdwc_pump"
 CONF_CLIMATE = "climate"
 CONF_DEHUMIDIFIER = "dehumidifier"
+CONF_HUMIDIFIER = "humidifier"
 CONF_CHILLER = "chiller"
 CONF_CAMERAS = "cameras"
 CONF_LEAK_SENSORS = "leak_sensors"
@@ -47,12 +48,13 @@ CONTROL_KEYS = (
     CONF_RDWC_PUMP,
     CONF_CLIMATE,
     CONF_DEHUMIDIFIER,
+    CONF_HUMIDIFIER,
     CONF_CHILLER,
 )
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.18.2"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.18.3"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 

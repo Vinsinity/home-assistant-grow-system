@@ -7,11 +7,14 @@
         "description": "Bir veya daha fazla ortam sensör cihazı seçin. Grow System her cihazın altındaki CO2, sıcaklık ve nem entity'lerini otomatik bulur ve VPD'yi hesaplar.",
         "data": {
           "environment_devices": "Ortam sensör cihazları",
+          "temperature_sensors": "Sıcaklık sensörleri",
+          "humidity_sensors": "Nem sensörleri",
+          "co2_sensors": "CO2 sensörleri",
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",
-          "water_temperature_sensor": "Su sıcaklığı sensörü",
-          "water_level_sensor": "RDWC su seviye sensörü"
+          "water_temperature_sensor": "Su sıcaklığı sensörleri",
+          "water_level_sensor": "Su seviye sensörleri"
         }
       },
       "controls": {
@@ -22,9 +25,10 @@
           "co2_valve": "CO2 selenoid valfi",
           "exhaust_fan": "Egzoz fanı",
           "inline_fan": "Giriş fanı",
-          "rdwc_pump": "RDWC sirkülasyon pompası",
+          "rdwc_pump": "Su sirkülasyon pompası",
           "climate": "Klima",
           "dehumidifier": "Nem alma cihazı",
+          "humidifier": "Nemlendirme cihazı",
           "chiller": "Su soğutucu"
         }
       }
@@ -38,11 +42,14 @@
         "description": "Ortam sensör cihazlarını seçin. Altlarındaki CO2, sıcaklık ve nem entity'leri otomatik keşfedilir.",
         "data": {
           "environment_devices": "Ortam sensör cihazları",
+          "temperature_sensors": "Sıcaklık sensörleri",
+          "humidity_sensors": "Nem sensörleri",
+          "co2_sensors": "CO2 sensörleri",
           "ppm_sensor": "Besin PPM sensörü",
           "ph_sensor": "pH sensörü",
           "do_sensor": "Çözünmüş oksijen sensörü",
-          "water_temperature_sensor": "Su sıcaklığı sensörü",
-          "water_level_sensor": "RDWC su seviye sensörü"
+          "water_temperature_sensor": "Su sıcaklığı sensörleri",
+          "water_level_sensor": "Su seviye sensörleri"
         }
       },
       "controls": {
@@ -53,9 +60,10 @@
           "co2_valve": "CO2 selenoid valfi",
           "exhaust_fan": "Egzoz fanı",
           "inline_fan": "Giriş fanı",
-          "rdwc_pump": "RDWC sirkülasyon pompası",
+          "rdwc_pump": "Su sirkülasyon pompası",
           "climate": "Klima",
           "dehumidifier": "Nem alma cihazı",
+          "humidifier": "Nemlendirme cihazı",
           "chiller": "Su soğutucu"
         }
       }

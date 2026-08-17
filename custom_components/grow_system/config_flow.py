@@ -23,11 +23,15 @@ from .const import (
     CONF_DO_SENSOR,
     CONF_ENVIRONMENT_DEVICES,
     CONF_EXHAUST_FAN,
+    CONF_HUMIDIFIER,
+    CONF_HUMIDITY_SENSORS,
     CONF_INLINE_FAN,
     CONF_LIGHT,
     CONF_PH_SENSOR,
     CONF_PPM_SENSOR,
     CONF_RDWC_PUMP,
+    CONF_TEMPERATURE_SENSORS,
+    CONF_CO2_SENSORS,
     CONF_WATER_TEMPERATURE_SENSOR,
     CONF_WATER_LEVEL_SENSOR,
     CONTROL_KEYS,
@@ -47,6 +51,12 @@ def _optional_default(defaults: dict[str, Any], key: str):
     return vol.Optional(key, default=defaults[key])
 
 
+def _multiple_default(defaults: dict[str, Any], key: str):
+    """Normalize older single-entity values for a multiple selector."""
+    value = defaults.get(key, [])
+    return vol.Optional(key, default=value if isinstance(value, list) else [value])
+
+
 def _sensor_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
@@ -54,11 +64,14 @@ def _sensor_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_ENVIRONMENT_DEVICES,
                 default=defaults.get(CONF_ENVIRONMENT_DEVICES, []),
             ): DeviceSelector(DeviceSelectorConfig(multiple=True)),
+            _multiple_default(defaults, CONF_TEMPERATURE_SENSORS): _entity("sensor", multiple=True),
+            _multiple_default(defaults, CONF_HUMIDITY_SENSORS): _entity("sensor", multiple=True),
+            _multiple_default(defaults, CONF_CO2_SENSORS): _entity("sensor", multiple=True),
             _optional_default(defaults, CONF_PPM_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_PH_SENSOR): _entity("sensor"),
             _optional_default(defaults, CONF_DO_SENSOR): _entity("sensor"),
-            _optional_default(defaults, CONF_WATER_TEMPERATURE_SENSOR): _entity("sensor"),
-            _optional_default(defaults, CONF_WATER_LEVEL_SENSOR): _entity(["sensor", "binary_sensor"]),
+            _multiple_default(defaults, CONF_WATER_TEMPERATURE_SENSOR): _entity("sensor", multiple=True),
+            _multiple_default(defaults, CONF_WATER_LEVEL_SENSOR): _entity(["sensor", "binary_sensor"], multiple=True),
         }
     )
 
@@ -73,6 +86,7 @@ def _control_schema(defaults: dict[str, Any]) -> vol.Schema:
             _optional_default(defaults, CONF_RDWC_PUMP): _entity(["switch", "fan"]),
             _optional_default(defaults, CONF_CLIMATE): _entity("climate"),
             _optional_default(defaults, CONF_DEHUMIDIFIER): _entity(["humidifier", "switch"]),
+            _optional_default(defaults, CONF_HUMIDIFIER): _entity(["humidifier", "switch"]),
             _optional_default(defaults, CONF_CHILLER): _entity(["climate", "switch", "water_heater"]),
         }
     )
