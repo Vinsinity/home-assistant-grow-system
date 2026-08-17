@@ -218,9 +218,9 @@ class GrowSystemPanel extends HTMLElement {
   }
 
   _missingSettings() {
-    const values = this._config.configured_entities || {};
+    const values = this._config.entities || {};
     const required = {
-      environment_devices:"Ortam sensörleri",ppm_sensor:"PPM",ph_sensor:"pH",do_sensor:"DO",
+      temperature_sensors:"Sıcaklık sensörleri",humidity_sensors:"Nem sensörleri",co2_sensors:"CO₂ sensörleri",ppm_sensor:"PPM",ph_sensor:"pH",do_sensor:"DO",
       water_temperature_sensor:"Su sıcaklığı",water_level_sensor:"Su seviyesi",light:"Işık",
       co2_valve:"CO₂ valfi",exhaust_fan:"Egzoz fanı",inline_fan:"Giriş fanı",
       rdwc_pump:"Su sirkülasyon pompası",climate:"Klima",dehumidifier:"Nem alma",humidifier:"Nemlendirme",chiller:"Su soğutucu",
