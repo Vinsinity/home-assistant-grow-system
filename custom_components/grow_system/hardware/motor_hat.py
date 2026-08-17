@@ -11,6 +11,14 @@ class MotorHat:
     mode1: int
     prescale: int
 
+    @property
+    def channels(self) -> list[dict]:
+        """Waveshare Motor Driver HAT channel layout from the vendor driver."""
+        return [
+            {"id": "A", "name": "Motor A", "pwm": 0, "direction": [1, 2]},
+            {"id": "B", "name": "Motor B", "pwm": 5, "direction": [3, 4]},
+        ]
+
 
 class MotorHatInventory:
     """Inspect HAT controller registers without writing or moving motors."""

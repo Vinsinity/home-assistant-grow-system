@@ -114,6 +114,7 @@ def _address(value) -> int:
         vol.Required("atlas_auto_discovery"): bool,
         vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
         vol.Required("atlas_devices"): list,
+        vol.Optional("device_assignments", default=[]): list,
     }
 )
 @websocket_api.require_admin
@@ -139,12 +140,33 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
     except (TypeError, ValueError, AttributeError) as err:
         connection.send_error(msg["id"], "invalid_hardware", str(err))
         return
+    try:
+        assignments = []
+        assigned = set()
+        allowed_drivers = {"waveshare_motor_hat", "pca9685_generic"}
+        for item in msg.get("device_assignments", []):
+            address = _address(item.get("address"))
+            driver = str(item.get("driver") or "")
+            if driver not in allowed_drivers:
+                raise ValueError(f"Unsupported I2C driver: {driver}")
+            if address in assigned:
+                continue
+            assigned.add(address)
+            assignments.append({
+                "address": address,
+                "driver": driver,
+                "name": str(item.get("name") or f"I2C 0x{address:02X}")[:64],
+            })
+    except (TypeError, ValueError, AttributeError) as err:
+        connection.send_error(msg["id"], "invalid_assignment", str(err))
+        return
     store = hass.data[DOMAIN]["store"]
     hardware = await store.async_update_hardware(
         {
             "atlas_auto_discovery": msg["atlas_auto_discovery"],
             "poll_interval": msg["poll_interval"],
             "atlas_devices": devices,
+            "device_assignments": assignments,
         }
     )
     connection.send_result(msg["id"], hardware)

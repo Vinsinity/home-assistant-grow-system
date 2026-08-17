@@ -27,6 +27,7 @@ class GrowSystemStore:
                 "poll_interval": 30,
                 "atlas_auto_discovery": True,
                 "atlas_devices": [],
+                "device_assignments": [],
             },
         }
 

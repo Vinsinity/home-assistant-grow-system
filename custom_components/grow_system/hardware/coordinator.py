@@ -33,6 +33,11 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         self.device_path = Path(f"/dev/i2c-{bus_number}")
         self.devices: list[AtlasDevice] = []
         self.hardware = hardware or {}
+        self.assignments = {
+            int(item["address"]): item
+            for item in self.hardware.get("device_assignments", [])
+            if "address" in item
+        }
         self._bus_lock = asyncio.Lock()
         self.diagnostic: dict[str, object] = {
             "available": False,
@@ -81,11 +86,20 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             bus.close()
         inventory = MotorHatInventory(self.bus_number)
         try:
-            hats = [
-                {"address": f"0x{hat.address:02x}", "mode1": f"0x{hat.mode1:02x}",
-                 "prescale": f"0x{hat.prescale:02x}", "outputs_enabled": False}
-                for hat in inventory.discover()
-            ]
+            hats = []
+            for hat in inventory.discover(range(0x40, 0x60)):
+                assignment = self.assignments.get(hat.address, {})
+                hats.append({
+                    "address": f"0x{hat.address:02x}",
+                    "mode1": f"0x{hat.mode1:02x}",
+                    "prescale": f"0x{hat.prescale:02x}",
+                    "chip": "PCA9685",
+                    "driver": assignment.get("driver"),
+                    "name": assignment.get("name"),
+                    "model": "Waveshare Motor Driver HAT" if assignment.get("driver") == "waveshare_motor_hat" else None,
+                    "channels": hat.channels if assignment.get("driver") == "waveshare_motor_hat" else [],
+                    "outputs_enabled": False,
+                })
         finally:
             inventory.close()
         return devices, hats

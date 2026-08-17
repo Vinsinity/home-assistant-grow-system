@@ -32,6 +32,13 @@ class MotorHatInventoryTest(unittest.TestCase):
         inventory._bus = FakeBus()
         hats = inventory.discover([0x40, 0x41])
         self.assertEqual([0x40], [hat.address for hat in hats])
+        self.assertEqual(
+            [
+                {"id": "A", "name": "Motor A", "pwm": 0, "direction": [1, 2]},
+                {"id": "B", "name": "Motor B", "pwm": 5, "direction": [3, 4]},
+            ],
+            hats[0].channels,
+        )
         self.assertEqual([(0x40, 0), (0x40, 0xFE), (0x41, 0)], inventory._bus.reads)
 
 
