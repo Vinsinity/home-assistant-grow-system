@@ -1,4 +1,4 @@
-class GrowSystemPanel extends HTMLElement {
+class HydroponicSystemPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -46,7 +46,7 @@ class GrowSystemPanel extends HTMLElement {
     if (!this._hass || this._loading) return;
     this._loading = true;
     try {
-      this._config = await this._hass.connection.sendMessagePromise({type: "grow_system/config/get"});
+      this._config = await this._hass.connection.sendMessagePromise({type: "hydroponic_system/config/get"});
       this._editingStage = this._config.active_stage || "germination";
       this._draft = {...this._config.profiles[this._editingStage]};
       this._profileDrafts = Object.fromEntries(Object.entries(this._config.profiles).map(([stage,profile])=>[stage,{...profile}]));
@@ -219,7 +219,7 @@ class GrowSystemPanel extends HTMLElement {
   }
   async _startCultivation(){
     if(!confirm("Bugünün tarihiyle yeni yetiştirme başlatılsın mı? Varsayılan plan uygulanacak; aşamalar otomatik değiştirilmeyecek."))return;
-    try{const cultivation=await this._hass.connection.sendMessagePromise({type:"grow_system/cultivation/start"});this._config.cultivation=cultivation;this._config.active_stage="germination";this._editingStage="germination";this._draft={...this._config.profiles.germination};this._tab="calendar";this._render();}catch(error){this._notice=`Yetiştirme başlatılamadı: ${error.message||error}`;this._render();}
+    try{const cultivation=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/cultivation/start"});this._config.cultivation=cultivation;this._config.active_stage="germination";this._editingStage="germination";this._draft={...this._config.profiles.germination};this._tab="calendar";this._render();}catch(error){this._notice=`Yetiştirme başlatılamadı: ${error.message||error}`;this._render();}
   }
 
   _connectionGroups() {
@@ -415,9 +415,9 @@ class GrowSystemPanel extends HTMLElement {
   async _saveSettings() {
     this._notice = "Bağlantılar kaydediliyor…"; this._updateNotice();
     try {
-      await this._hass.connection.sendMessagePromise({type:"grow_system/entities/save",values:this._settings});
+      await this._hass.connection.sendMessagePromise({type:"hydroponic_system/entities/save",values:this._settings});
       await new Promise((resolve) => setTimeout(resolve, 150));
-      this._config = await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});
+      this._config = await this._hass.connection.sendMessagePromise({type:"hydroponic_system/config/get"});
       this._settings = {...(this._config.configured_entities || {})};
       this._notice = "Bağlantılar kaydedildi";
       this._history = {}; this._render(); this._loadHistory();
@@ -474,16 +474,16 @@ class GrowSystemPanel extends HTMLElement {
   async _saveHardware() {
     this._hardwareNotice="Kaydediliyor…";const status=this.shadowRoot.querySelector("[data-hardware-status]"); if(status)status.textContent=this._hardwareNotice;
     try {
-      const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[],dosing_fluids:this._hardwareDraft.dosing_fluids||[]});
+      const result=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/save",poll_interval:Number(this._hardwareDraft.poll_interval||30),device_assignments:this._hardwareDraft.device_assignments||[],dosing_fluids:this._hardwareDraft.dosing_fluids||[]});
       if(result.reloading){this._hardwareNotice="Sensör entity’leri arka planda hazırlanıyor…";this._render();this._refreshHardwareAfterReload();}
-      else{this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._hardwareNotice="Ayarlar kaydedildi";this._render();}
+      else{this._config=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._hardwareNotice="Ayarlar kaydedildi";this._render();}
     } catch(error) { this._hardwareNotice=`Kaydedilemedi: ${error.message||error}`;if(status)status.textContent=this._hardwareNotice; }
   }
   async _refreshHardwareAfterReload() {
     for(let attempt=0;attempt<12;attempt++){
       await new Promise((resolve)=>setTimeout(resolve,750));
       try{
-        const config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});
+        const config=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/config/get"});
         this._config=config;this._hardwareDraft=JSON.parse(JSON.stringify(config.hardware_config));
         this._hardwareNotice="Cihaz hazır";this._deviceNotice="";this._render();return;
       }catch(_){/* Integration is briefly unavailable while entities are recreated. */}
@@ -548,7 +548,7 @@ class GrowSystemPanel extends HTMLElement {
     if(!Number.isFinite(seconds)||seconds<1||seconds>30||!Number.isInteger(speed)||speed<20||speed>100){this._deviceNotice="Test süresi 1–30 saniye, hız %20–100 olmalıdır.";this._render();return;}
     if(!confirm(`Motor ${channel.id}, ${seconds} saniye boyunca %${speed} hızla çalışacak. Hortum güvenli bir ölçü kabında mı?`))return;
     this._deviceNotice=`Motor ${channel.id} çalışıyor; ${seconds} saniye sonra otomatik duracak…`;const message=this.shadowRoot.querySelector("[data-device-message]"),runButton=this.shadowRoot.querySelector(`[data-run-motor="${index}"]`);if(message)message.textContent=this._deviceNotice;if(runButton)runButton.disabled=true;
-    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/motor_test",address:this._deviceSettings.address,channel:channel.id,seconds,speed,confirmed:true});this._deviceNotice=`Motor ${channel.id} durdu. Ölçü kabındaki hacmi girip kalibrasyonu kaydedin.`;}
+    try{await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/motor_test",address:this._deviceSettings.address,channel:channel.id,seconds,speed,confirmed:true});this._deviceNotice=`Motor ${channel.id} durdu. Ölçü kabındaki hacmi girip kalibrasyonu kaydedin.`;}
     catch(error){this._deviceNotice=`Motor testi başarısız: ${error.message||error}`;}if(message)message.textContent=this._deviceNotice;if(runButton)runButton.disabled=false;
   }
   async _saveMotorCalibration(index){
@@ -564,7 +564,7 @@ class GrowSystemPanel extends HTMLElement {
     const input=this.shadowRoot.querySelector("[data-atlas-command]");const value=(command||input?.value||"").trim();const confirmed=trusted||this.shadowRoot.querySelector("[data-atlas-command-confirm]")?.checked;
     if(!value){this._deviceNotice="Gönderilecek komutu yazın.";this._render();return;}if(!confirmed){this._deviceNotice="Komut gönderimini onaylayın.";this._render();return;}
     this._atlasCommandResult=`> ${value}\nGönderiliyor…`;this._render();
-    try{const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/atlas_command",address:this._deviceSettings.address,command:value,confirmed:true});this._atlasCommandResult=`> ${value}\n${result.result||"OK (boş yanıt)"}`;this._deviceNotice="Komut tamamlandı";}
+    try{const result=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/atlas_command",address:this._deviceSettings.address,command:value,confirmed:true});this._atlasCommandResult=`> ${value}\n${result.result||"OK (boş yanıt)"}`;this._deviceNotice="Komut tamamlandı";}
     catch(error){this._atlasCommandResult=`> ${value}\nHATA: ${error.message||error}`;this._deviceNotice="Komut başarısız";}this._render();
   }
   async _changeAtlasAddress(){
@@ -572,7 +572,7 @@ class GrowSystemPanel extends HTMLElement {
     if(!confirmed){this._deviceNotice="Adres değişikliğini onaylayın.";this._render();return;}if(!Number.isInteger(parsed)||parsed<0x08||parsed>0x77){this._deviceNotice="0x08–0x77 arasında geçerli bir adres girin.";this._render();return;}
     if(!confirm(`Atlas devresinin adresi 0x${Number(this._deviceSettings.address).toString(16).padStart(2,"0")} → 0x${parsed.toString(16).padStart(2,"0")} olarak değiştirilsin mi?`))return;
     this._deviceNotice="Adres değiştiriliyor; cihaz yeniden başlayacak…";this._render();
-    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/atlas_change_address",address:this._deviceSettings.address,new_address:parsed,confirmed:true});this._deviceSettings=null;this._hardwareNotice="Atlas adresi değiştirildi; cihaz listesi yenilendi";this._config=await this._hass.connection.sendMessagePromise({type:"grow_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._render();}
+    try{await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/atlas_change_address",address:this._deviceSettings.address,new_address:parsed,confirmed:true});this._deviceSettings=null;this._hardwareNotice="Atlas adresi değiştirildi; cihaz listesi yenilendi";this._config=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/config/get"});this._hardwareDraft=JSON.parse(JSON.stringify(this._config.hardware_config));this._render();}
     catch(error){this._deviceNotice=`Adres değiştirilemedi: ${error.message||error}`;this._render();}
   }
   _fluidId(name){return `fluid_${name.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,30)||Date.now()}`;}
@@ -596,7 +596,7 @@ class GrowSystemPanel extends HTMLElement {
     this._hardwareDraft.dosing_fluids=(this._hardwareDraft.dosing_fluids||[]).filter((fluid)=>fluid.id!==id||fluid.required);this._saveHardware();
   }
   async _readCalibration(){
-    try{const result=await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibration_status",address:this._deviceSettings.address});this._calibrationStatus=result.status;this._deviceNotice="Kalibrasyon durumu okundu";this._render();}
+    try{const result=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/calibration_status",address:this._deviceSettings.address});this._calibrationStatus=result.status;this._deviceNotice="Kalibrasyon durumu okundu";this._render();}
     catch(error){this._deviceNotice=`Durum okunamadı: ${error.message||error}`;this._render();}
   }
   async _runCalibration(){
@@ -606,40 +606,40 @@ class GrowSystemPanel extends HTMLElement {
     const needsValue=["low","mid","high","one","reference"].includes(operation);
     if(!confirmed){this._deviceNotice="Önce probun doğru referans ortamında olduğunu onaylayın.";this._render();return;}
     if(needsValue&&!Number.isFinite(Number(valueText))){this._deviceNotice="Bu işlem için geçerli bir referans değeri girin.";this._render();return;}
-    try{await this._hass.connection.sendMessagePromise({type:"grow_system/hardware/calibrate",address:this._deviceSettings.address,operation,value:needsValue?Number(valueText):undefined,confirmed:true});this._deviceNotice="Kalibrasyon komutu tamamlandı";await this._readCalibration();}
+    try{await this._hass.connection.sendMessagePromise({type:"hydroponic_system/hardware/calibrate",address:this._deviceSettings.address,operation,value:needsValue?Number(valueText):undefined,confirmed:true});this._deviceNotice="Kalibrasyon komutu tamamlandı";await this._readCalibration();}
     catch(error){this._deviceNotice=`Kalibrasyon başarısız: ${error.message||error}`;this._render();}
   }
 
   async _saveProfile() {
     this._notice="Kaydediliyor…"; this._updateNotice();
-    try { const saved=await this._hass.connection.sendMessagePromise({type:"grow_system/profile/save",stage:this._editingStage,values:this._draft}); this._config.profiles[this._editingStage]=saved; this._draft={...saved}; this._notice="Profil kaydedildi"; }
+    try { const saved=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/profile/save",stage:this._editingStage,values:this._draft}); this._config.profiles[this._editingStage]=saved; this._draft={...saved}; this._notice="Profil kaydedildi"; }
     catch(error){this._notice=`Kaydedilemedi: ${error.message||error}`;} this._updateNotice();
   }
   async _saveProfileRow(stage){
     this._notice=`${this._profileDrafts[stage].name} kaydediliyor…`;this._updateNotice();
-    try{const saved=await this._hass.connection.sendMessagePromise({type:"grow_system/profile/save",stage,values:this._profileDrafts[stage]});this._config.profiles[stage]=saved;this._profileDrafts[stage]={...saved};const block=(this._config.cultivation?.plan||[]).find((item)=>item.stage===stage);if(block)block.planned_days=saved.planned_days;if(stage===this._editingStage)this._draft={...saved};this._notice=`${saved.name} kaydedildi`;}
+    try{const saved=await this._hass.connection.sendMessagePromise({type:"hydroponic_system/profile/save",stage,values:this._profileDrafts[stage]});this._config.profiles[stage]=saved;this._profileDrafts[stage]={...saved};const block=(this._config.cultivation?.plan||[]).find((item)=>item.stage===stage);if(block)block.planned_days=saved.planned_days;if(stage===this._editingStage)this._draft={...saved};this._notice=`${saved.name} kaydedildi`;}
     catch(error){this._notice=`Kaydedilemedi: ${error.message||error}`;}this._render();
   }
   async _activateProfile(stage){
     if(!this._config?.cultivation?.active){this._notice="Aşama seçmek için önce yetiştirme başlatın.";this._render();return;}
     const profile=this._profileDrafts[stage];if(stage===this._config.active_stage||!confirm(`${profile.name} aktif profil yapılsın mı? Sistem izleme modunda kalacak.`))return;
-    try{await this._hass.connection.sendMessagePromise({type:"grow_system/stage/select",stage});this._config.active_stage=stage;this._editingStage=stage;this._draft={...this._config.profiles[stage]};this._render();}catch(error){this._notice=`Aşama değiştirilemedi: ${error.message||error}`;this._render();}
+    try{await this._hass.connection.sendMessagePromise({type:"hydroponic_system/stage/select",stage});this._config.active_stage=stage;this._editingStage=stage;this._draft={...this._config.profiles[stage]};this._render();}catch(error){this._notice=`Aşama değiştirilemedi: ${error.message||error}`;this._render();}
   }
   _closeProfileEditor(){if(this._profileEditor)this._profileDrafts[this._profileEditor]={...this._config.profiles[this._profileEditor]};this._profileEditor=null;this._notice="";this._render();}
   async _activate() {
     if (this._editingStage===this._config.active_stage) return;
     if (!confirm(`${this._draft.name} aktif aşama yapılsın mı? Sistem izleme modunda kalacak.`)) return;
-    await this._hass.connection.sendMessagePromise({type:"grow_system/stage/select",stage:this._editingStage}); this._config.active_stage=this._editingStage; this._render();
+    await this._hass.connection.sendMessagePromise({type:"hydroponic_system/stage/select",stage:this._editingStage}); this._config.active_stage=this._editingStage; this._render();
   }
   _updateNotice(){const el=this.shadowRoot?.querySelector("[data-status]");if(el)el.textContent=this._notice;}
   _refreshReadings(){if(this._tab==="overview"&&this._config)this._render();}
 
   _render() {
     if (!this.shadowRoot) return;
-    if (!this._config || !this._draft) { this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><div class="loading"><ha-circular-progress active></ha-circular-progress>Hydroponic System yükleniyor…</div>`; return; }
+    if (!this._config || !this._draft) { this.shadowRoot.innerHTML=`<style>${HydroponicSystemPanel.styles}</style><div class="loading"><ha-circular-progress active></ha-circular-progress>Hydroponic System yükleniyor…</div>`; return; }
     const body=this._tab==="overview"?`${this._cycleSummary()}${this._securityOverview()}${this._overview()}`:this._tab==="profiles"?this._profiles():this._tab==="calendar"?this._calendarView():this._tab==="album"?this._albumView():this._tab==="hardware"?this._hardwareView():this._tab==="nutrients"?this._nutrientsView():this._tab==="dosing"?this._dosingView():this._settingsView();
     const connections=this._connectionGroups().flatMap((group)=>group.items),connected=connections.filter((item)=>item.connected).length;
-    this.shadowRoot.innerHTML=`<style>${GrowSystemPanel.styles}</style><main><header><div><h1>Hydroponic System</h1><p>Hidroponik yetiştirme yönetimi</p></div><div class="system-summary"><button class="summary-action" data-open-system="control"><ha-icon icon="mdi:eye-outline"></ha-icon><span><b>İzleme modu</b><small>Durumu görüntüle</small></span></button><button class="summary-action" data-open-system="connections"><ha-icon icon="mdi:connection"></ha-icon><span><b>${connected}/${connections.length} bağlantı</b><small>Yapılandırmayı görüntüle</small></span></button></div></header>
+    this.shadowRoot.innerHTML=`<style>${HydroponicSystemPanel.styles}</style><main><header><div><h1>Hydroponic System</h1><p>Hidroponik yetiştirme yönetimi</p></div><div class="system-summary"><button class="summary-action" data-open-system="control"><ha-icon icon="mdi:eye-outline"></ha-icon><span><b>İzleme modu</b><small>Durumu görüntüle</small></span></button><button class="summary-action" data-open-system="connections"><ha-icon icon="mdi:connection"></ha-icon><span><b>${connected}/${connections.length} bağlantı</b><small>Yapılandırmayı görüntüle</small></span></button></div></header>
       ${this._activeStageSummary()}
       <nav><button data-tab="overview" class="${this._tab==="overview"?"active":""}"><ha-icon icon="mdi:view-dashboard-outline"></ha-icon>Genel bakış</button><button data-tab="calendar" class="${this._tab==="calendar"?"active":""}"><ha-icon icon="mdi:calendar-month-outline"></ha-icon>Takvim</button><button data-tab="album" class="${this._tab==="album"?"active":""}"><ha-icon icon="mdi:image-multiple-outline"></ha-icon>Albüm</button><button data-tab="profiles" class="${this._tab==="profiles"?"active":""}"><ha-icon icon="mdi:tune-variant"></ha-icon>Profiller</button><button data-tab="nutrients" class="${this._tab==="nutrients"?"active":""}"><ha-icon icon="mdi:flask-outline"></ha-icon>Besinler</button><button data-tab="hardware" class="${this._tab==="hardware"?"active":""}"><ha-icon icon="mdi:memory"></ha-icon>Donanım</button><button data-tab="dosing" class="${this._tab==="dosing"?"active":""}"><ha-icon icon="mdi:beaker-outline"></ha-icon>Dozaj</button><button data-tab="settings" class="${this._tab==="settings"?"active":""}"><ha-icon icon="mdi:cog-outline"></ha-icon>Ayarlar</button></nav>${body}</main>${this._deviceSettingsDialog()}${this._fluidDialogView()}${this._growDayDialog()}${this._profileEditorDialog()}${this._systemStatusDialog()}`;
     this.shadowRoot.querySelectorAll("[data-open-system]").forEach((button)=>button.addEventListener("click",()=>{this._systemDialog=button.dataset.openSystem;this._render();}));
@@ -701,4 +701,4 @@ class GrowSystemPanel extends HTMLElement {
     .system-summary{display:flex;align-items:center;gap:8px}.summary-action{display:flex;align-items:center;gap:10px;min-width:168px;padding:10px 13px;border:1px solid var(--divider-color);border-radius:10px;color:var(--primary-text-color);background:var(--card-background-color);text-align:left;cursor:pointer}.summary-action:hover{border-color:var(--primary-color);background:var(--secondary-background-color)}.summary-action>ha-icon{color:var(--state-icon-color)}.summary-action span,.summary-action small{display:block}.summary-action b{font-size:12px;font-weight:600}.summary-action small{margin-top:2px;color:var(--secondary-text-color);font-size:10px}.system-dialog{width:min(780px,100%)}.mode-panel{display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--divider-color);border-radius:10px;background:var(--secondary-background-color)}.mode-panel>ha-icon{color:var(--primary-color)}.mode-panel span,.mode-panel small{display:block}.mode-panel small{margin-top:5px;color:var(--secondary-text-color);font-size:12px;line-height:1.5}.dialog-copy{margin:0;color:var(--secondary-text-color);font-size:12px;line-height:1.6}.connection-groups{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}.connection-groups section{overflow:hidden;border:1px solid var(--divider-color);border-radius:9px}.connection-groups h3{margin:0;padding:12px 13px;border-bottom:1px solid var(--divider-color);background:var(--secondary-background-color);font-size:13px}.connection-row{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--divider-color)}.connection-row:last-child{border-bottom:0}.connection-row ha-icon{--mdc-icon-size:17px;color:var(--secondary-text-color)}.connection-row.connected ha-icon{color:var(--success-color,#43a047)}.connection-row span{font-size:11px}.connection-row small{color:var(--secondary-text-color);font-size:9px}.connection-groups>.dialog-copy{grid-column:1/-1}@media(max-width:760px){.connection-groups{grid-template-columns:1fr}.system-summary{align-items:stretch;flex-direction:column}.summary-action{width:100%}}
   `;}
 }
-if(!customElements.get("grow-system-panel"))customElements.define("grow-system-panel",GrowSystemPanel);
+if(!customElements.get("hydroponic-system-panel"))customElements.define("hydroponic-system-panel",HydroponicSystemPanel);

@@ -1,8 +1,8 @@
-"""Constants and default profiles for Grow System Extension."""
+"""Constants and default profiles for Hydroponic System."""
 
 from __future__ import annotations
 
-DOMAIN = "grow_system"
+DOMAIN = "hydroponic_system"
 CONF_ENVIRONMENT_DEVICES = "environment_devices"
 CONF_CO2_SENSORS = "co2_sensors"
 CONF_TEMPERATURE_SENSORS = "temperature_sensors"
@@ -53,10 +53,10 @@ CONTROL_KEYS = (
 )
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
-PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.23.0"
-PANEL_PATH = "grow-system"
-PANEL_COMPONENT = "grow-system-panel"
+PANEL_URL = "/hydroponic-system-static/hydroponic-system-panel.js"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.24.0"
+PANEL_PATH = "hydroponic-system"
+PANEL_COMPONENT = "hydroponic-system-panel"
 
 STAGE_ORDER = ["germination", "early_veg", "veg", "bloom", "darkness", "harvest"]
 

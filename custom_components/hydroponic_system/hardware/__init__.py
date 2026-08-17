@@ -1,4 +1,4 @@
-"""Native hardware support for Grow System Extension."""
+"""Native hardware support for Hydroponic System."""
 
 from .atlas_ezo import AtlasDevice, AtlasEzoBus, AtlasProtocolError
 

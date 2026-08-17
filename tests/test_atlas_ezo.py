@@ -7,7 +7,7 @@ import sys
 import unittest
 
 
-MODULE = Path(__file__).parents[1] / "custom_components/grow_system/hardware/atlas_ezo.py"
+MODULE = Path(__file__).parents[1] / "custom_components/hydroponic_system/hardware/atlas_ezo.py"
 SPEC = importlib.util.spec_from_file_location("atlas_ezo", MODULE)
 atlas_ezo = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = atlas_ezo

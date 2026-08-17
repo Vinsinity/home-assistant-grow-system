@@ -1,4 +1,4 @@
-"""WebSocket API used by the Grow System panel."""
+"""WebSocket API used by the Hydroponic System panel."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .const import CONTROL_KEYS, DEFAULT_CULTIVATION_PLAN, DOMAIN, SENSOR_KEYS, 
 from .entity_map import resolve_entities
 
 
-@websocket_api.websocket_command({vol.Required("type"): "grow_system/config/get"})
+@websocket_api.websocket_command({vol.Required("type"): "hydroponic_system/config/get"})
 @websocket_api.async_response
 async def websocket_get_config(hass, connection, msg) -> None:
     """Return the complete compact profile document."""
@@ -42,7 +42,7 @@ async def websocket_get_config(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/entities/save",
+        vol.Required("type"): "hydroponic_system/entities/save",
         vol.Required("values"): dict,
     }
 )
@@ -69,7 +69,7 @@ async def websocket_save_entities(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/profile/save",
+        vol.Required("type"): "hydroponic_system/profile/save",
         vol.Required("stage"): vol.In(STAGE_ORDER),
         vol.Required("values"): dict,
     }
@@ -96,7 +96,7 @@ async def websocket_save_profile(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/stage/select",
+        vol.Required("type"): "hydroponic_system/stage/select",
         vol.Required("stage"): vol.In(STAGE_ORDER),
     }
 )
@@ -122,7 +122,7 @@ async def websocket_select_stage(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/cultivation/start",
+        vol.Required("type"): "hydroponic_system/cultivation/start",
         vol.Optional("name", default=""): str,
         vol.Optional("start_date", default=""): str,
     }
@@ -168,7 +168,7 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
 
 
 @websocket_api.websocket_command(
-    {vol.Required("type"): "grow_system/cultivation/finish"}
+    {vol.Required("type"): "hydroponic_system/cultivation/finish"}
 )
 @websocket_api.require_admin
 @websocket_api.async_response
@@ -193,7 +193,7 @@ def _address(value) -> int:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/save",
+        vol.Required("type"): "hydroponic_system/hardware/save",
         vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
         vol.Optional("device_assignments", default=[]): list,
         vol.Optional("dosing_fluids", default=[]): list,
@@ -370,7 +370,7 @@ def _pump_profile(value) -> dict:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/motor_test",
+        vol.Required("type"): "hydroponic_system/hardware/motor_test",
         vol.Required("address"): vol.Any(int, str),
         vol.Required("channel"): vol.In(("A", "B")),
         vol.Required("seconds"): vol.All(vol.Coerce(float), vol.Range(min=1, max=30)),
@@ -401,7 +401,7 @@ async def websocket_motor_test(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/calibration_status",
+        vol.Required("type"): "hydroponic_system/hardware/calibration_status",
         vol.Required("address"): vol.Any(int, str),
     }
 )
@@ -420,7 +420,7 @@ async def websocket_calibration_status(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/calibrate",
+        vol.Required("type"): "hydroponic_system/hardware/calibrate",
         vol.Required("address"): vol.Any(int, str),
         vol.Required("operation"): str,
         vol.Optional("value"): vol.Any(int, float),
@@ -444,7 +444,7 @@ async def websocket_calibrate(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/atlas_command",
+        vol.Required("type"): "hydroponic_system/hardware/atlas_command",
         vol.Required("address"): vol.Any(int, str),
         vol.Required("command"): str,
         vol.Required("confirmed"): True,
@@ -469,7 +469,7 @@ async def websocket_atlas_command(hass, connection, msg) -> None:
 
 @websocket_api.websocket_command(
     {
-        vol.Required("type"): "grow_system/hardware/atlas_change_address",
+        vol.Required("type"): "hydroponic_system/hardware/atlas_change_address",
         vol.Required("address"): vol.Any(int, str),
         vol.Required("new_address"): vol.Any(int, str),
         vol.Required("confirmed"): True,

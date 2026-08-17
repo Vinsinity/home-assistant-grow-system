@@ -11,7 +11,7 @@ from homeassistant.helpers.storage import Store
 from .const import DEFAULT_CULTIVATION_PLAN, DEFAULT_PROFILES, STORAGE_KEY, STORAGE_VERSION
 
 
-class GrowSystemStore:
+class HydroponicSystemStore:
     """Store all profiles as one document instead of dozens of helpers."""
 
     def __init__(self, hass: HomeAssistant) -> None:

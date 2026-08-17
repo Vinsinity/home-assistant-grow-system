@@ -1,4 +1,4 @@
-"""Grow System Extension."""
+"""Hydroponic System."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN, PANEL_COMPONENT, PANEL_MODULE_URL, PANEL_PATH, PANEL_URL
 from .entity_map import resolve_entities
 from .hardware.coordinator import AtlasI2CCoordinator
-from .store import GrowSystemStore
+from .store import HydroponicSystemStore
 from .websocket_api import async_register
 
 PLATFORMS = [Platform.SENSOR]
@@ -29,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Load profiles and expose the panel asset."""
     if entry.title != "Hydroponic System":
         hass.config_entries.async_update_entry(entry, title="Hydroponic System")
-    store = GrowSystemStore(hass)
+    store = HydroponicSystemStore(hass)
     await store.async_load()
     hass.data[DOMAIN]["store"] = store
     configured = {**entry.data, **entry.options}
@@ -55,7 +55,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
-    panel_path = Path(__file__).parent / "frontend" / "grow-system-panel.js"
+    panel_path = Path(__file__).parent / "frontend" / "hydroponic-system-panel.js"
     if not hass.data[DOMAIN].get("panel_static_registered"):
         await hass.http.async_register_static_paths(
             [StaticPathConfig(PANEL_URL, str(panel_path), False)]

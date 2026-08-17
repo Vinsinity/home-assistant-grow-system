@@ -1,4 +1,4 @@
-# Grow System Extension
+# Hydroponic System
 
 Home Assistant profile manager and dedicated control surface for a staged indoor grow system.
 
@@ -36,16 +36,16 @@ Home Assistant profile manager and dedicated control surface for a staged indoor
 
 1. In HACS, open **Integrations**.
 2. Select the three-dot menu → **Custom repositories**.
-3. Add `https://github.com/Vinsinity/home-assistant-grow-system` as an **Integration**.
-4. Search for **Grow System Extension** and download it.
+3. Add `https://github.com/Vinsinity/home-assistant-hydroponic-system` as an **Integration**.
+4. Search for **Hydroponic System** and download it.
 5. Restart Home Assistant.
-6. Add **Grow System Extension** from Settings → Devices & services.
+6. Add **Hydroponic System** from Settings → Devices & services.
 
-The **Grow System** panel is registered automatically. No YAML or SSH access is required after HACS installs the integration.
+The **Hydroponic System** panel is registered automatically. No YAML or SSH access is required after HACS installs the integration.
 
 ## Manual development install
 
-Copy `custom_components/grow_system` into Home Assistant's `config/custom_components` directory, restart Home Assistant, and add the integration from Settings → Devices & services.
+Copy `custom_components/hydroponic_system` into Home Assistant's `config/custom_components` directory, restart Home Assistant, and add the integration from Settings → Devices & services.
 
 The profile editor and entity mappings are intentionally separate from the control engine. Saving a profile, selecting a stage, or mapping equipment in version 0.7.0 does not operate equipment.
 
@@ -58,6 +58,6 @@ The safest migration is a second microSD card:
 3. Keep the InterLink i3 and probes physically connected, then boot the new HAOS card.
 4. Enable I2C in HAOS by adding `dtparam=i2c1=on` and `dtparam=i2c_arm=on` to `config.txt`.
 5. Load the `i2c-dev` and `i2c-bcm2708` host modules as documented by Home Assistant OS.
-6. Install Grow System Extension and open Grow System → Settings → Local Raspberry Pi hardware.
+6. Install Hydroponic System and open Hydroponic System → Settings → Local Raspberry Pi hardware.
 
 If `/dev/i2c-1` is not available to Home Assistant Core, the integration remains usable and reports the exact diagnostic instead of failing setup. The old installation can be restored by powering down and reinserting the untouched MyCodo microSD card.

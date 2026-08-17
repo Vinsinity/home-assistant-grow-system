@@ -1,4 +1,4 @@
-"""Config flow for Grow System Extension."""
+"""Config flow for Hydroponic System."""
 
 from __future__ import annotations
 
@@ -92,8 +92,8 @@ def _control_schema(defaults: dict[str, Any]) -> vol.Schema:
     )
 
 
-class GrowSystemConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Create a single Grow System instance."""
+class HydroponicSystemConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Create a single Hydroponic System instance."""
 
     VERSION = 1
 
@@ -123,10 +123,10 @@ class GrowSystemConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
-        return GrowSystemOptionsFlow()
+        return HydroponicSystemOptionsFlow()
 
 
-class GrowSystemOptionsFlow(config_entries.OptionsFlow):
+class HydroponicSystemOptionsFlow(config_entries.OptionsFlow):
     """Edit entity mappings after setup."""
 
     def __init__(self) -> None:

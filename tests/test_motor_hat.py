@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import unittest
 
-MODULE = Path(__file__).parents[1] / "custom_components/grow_system/hardware/motor_hat.py"
+MODULE = Path(__file__).parents[1] / "custom_components/hydroponic_system/hardware/motor_hat.py"
 SPEC = importlib.util.spec_from_file_location("motor_hat", MODULE)
 motor_hat = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = motor_hat
