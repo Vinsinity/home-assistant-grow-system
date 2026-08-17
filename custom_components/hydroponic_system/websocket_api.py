@@ -151,20 +151,6 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
     if store.data.get("cultivation", {}).get("active"):
         connection.send_error(msg["id"], "already_active", "A cultivation is already active")
         return
-    configured = hass.data[DOMAIN].get("configured_entities", {})
-    entities = resolve_entities(hass, configured)
-    readiness = cultivation_readiness(
-        entities,
-        store.data.get("hardware", {}),
-        _live_atlas_drivers(hass.data[DOMAIN].get("atlas_i2c")),
-    )
-    if not readiness["ready"]:
-        labels = ", ".join(item["label"] for item in readiness["missing"])
-        connection.send_error(
-            msg["id"], "monitoring_not_ready",
-            f"Zorunlu izleme sensörleri eksik: {labels}",
-        )
-        return
     start_date = msg.get("start_date") or date.today().isoformat()
     try:
         date.fromisoformat(start_date)
