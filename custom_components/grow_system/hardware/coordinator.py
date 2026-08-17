@@ -12,7 +12,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from ..const import DOMAIN
 from .atlas_ezo import DEFAULT_ADDRESSES, AtlasDevice, AtlasEzoBus
-from .motor_hat import MotorHatInventory
+from .motor_hat import MotorHatInventory, WaveshareMotorHatController
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -219,3 +219,24 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             bus.change_address(device, new_address)
         finally:
             bus.close()
+
+    async def async_motor_test(
+        self, address: int, channel: str, seconds: float, speed: int
+    ) -> None:
+        """Run one explicitly confirmed, bounded Waveshare pump test."""
+        assignment = self.assignments.get(address)
+        if not assignment or assignment.get("driver") != "waveshare_motor_hat":
+            raise ValueError(f"No Waveshare Motor Driver HAT assigned at 0x{address:02X}")
+        async with self._bus_lock:
+            await self.hass.async_add_executor_job(
+                self._motor_test, address, channel, seconds, speed
+            )
+
+    def _motor_test(
+        self, address: int, channel: str, seconds: float, speed: int
+    ) -> None:
+        controller = WaveshareMotorHatController(self.bus_number, address)
+        try:
+            controller.timed_run(channel, seconds, speed)
+        finally:
+            controller.close()

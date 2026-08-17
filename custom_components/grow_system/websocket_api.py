@@ -285,6 +285,7 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
                         "id": channel_id,
                         "name": str(channel.get("name") or f"Motor {channel_id}")[:64],
                         "fluid_id": fluid_id,
+                        "calibration": _motor_calibration(channel.get("calibration")),
                     })
                 assignment["channels"] = channels
             assignments.append(assignment)
@@ -321,6 +322,55 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
     if reload_required:
         entry = hass.data[DOMAIN]["entry"]
         hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+
+def _motor_calibration(value) -> dict | None:
+    """Validate a measured pump calibration persisted by the panel."""
+    if not isinstance(value, dict):
+        return None
+    seconds = float(value.get("seconds", 0))
+    volume_ml = float(value.get("volume_ml", 0))
+    speed = int(value.get("speed", 100))
+    if not 1 <= seconds <= 30 or not 0 < volume_ml <= 500 or not 20 <= speed <= 100:
+        raise ValueError("Invalid motor calibration measurement")
+    return {
+        "seconds": round(seconds, 2),
+        "volume_ml": round(volume_ml, 3),
+        "speed": speed,
+        "flow_ml_s": round(volume_ml / seconds, 5),
+        "calibrated_at": str(value.get("calibrated_at") or "")[:40],
+    }
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/motor_test",
+        vol.Required("address"): vol.Any(int, str),
+        vol.Required("channel"): vol.In(("A", "B")),
+        vol.Required("seconds"): vol.All(vol.Coerce(float), vol.Range(min=1, max=30)),
+        vol.Required("speed"): vol.All(vol.Coerce(int), vol.Range(min=20, max=100)),
+        vol.Required("confirmed"): True,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_motor_test(hass, connection, msg) -> None:
+    """Run one short, confirmed pump test; the driver always stops afterward."""
+    try:
+        address = _address(msg["address"])
+        await hass.data[DOMAIN]["atlas_i2c"].async_motor_test(
+            address, msg["channel"], msg["seconds"], msg["speed"]
+        )
+    except (TypeError, ValueError, OSError, RuntimeError) as err:
+        connection.send_error(msg["id"], "motor_test_failed", str(err))
+        return
+    connection.send_result(msg["id"], {
+        "address": address,
+        "channel": msg["channel"],
+        "seconds": msg["seconds"],
+        "speed": msg["speed"],
+        "stopped": True,
+    })
 
 
 @websocket_api.websocket_command(
@@ -441,6 +491,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_start_cultivation)
     websocket_api.async_register_command(hass, websocket_finish_cultivation)
     websocket_api.async_register_command(hass, websocket_save_hardware)
+    websocket_api.async_register_command(hass, websocket_motor_test)
     websocket_api.async_register_command(hass, websocket_calibration_status)
     websocket_api.async_register_command(hass, websocket_calibrate)
     websocket_api.async_register_command(hass, websocket_atlas_command)
