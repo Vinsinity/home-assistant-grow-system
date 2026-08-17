@@ -127,10 +127,22 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             "waveshare_motor_hat", "pca9685_generic",
             "atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd",
         }
-        dosing_fluids = [
-            {"id": "ph_up", "name": "pH+", "required": True},
-            {"id": "ph_down", "name": "pH−", "required": True},
-        ]
+        incoming_required = {
+            str(fluid.get("id")): fluid
+            for fluid in msg.get("dosing_fluids", [])
+            if isinstance(fluid, dict) and fluid.get("id") in {"ph_up", "ph_down"}
+        }
+        dosing_fluids = []
+        for fluid_id, default_name in (("ph_up", "pH+"), ("ph_down", "pH−")):
+            fluid = incoming_required.get(fluid_id, {})
+            dosing_fluids.append({
+                "id": fluid_id,
+                "name": str(fluid.get("name") or default_name)[:64],
+                "brand": str(fluid.get("brand") or "Belirtilmedi")[:64],
+                "category": "ph",
+                "catalog_id": str(fluid.get("catalog_id") or "")[:96],
+                "required": True,
+            })
         fluid_ids = {"ph_up", "ph_down"}
         for fluid in msg.get("dosing_fluids", []):
             fluid_id = str(fluid.get("id") or "")[:48]
