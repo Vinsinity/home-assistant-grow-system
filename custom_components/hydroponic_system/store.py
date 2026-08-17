@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import DEFAULT_CULTIVATION_PLAN, DEFAULT_PROFILES, STORAGE_KEY, STORAGE_VERSION
+from .const import DEFAULT_CULTIVATION_PLAN, DEFAULT_DOSING_POLICY, DEFAULT_PROFILES, STORAGE_KEY, STORAGE_VERSION
 
 
 class HydroponicSystemStore:
@@ -32,6 +32,7 @@ class HydroponicSystemStore:
             "hardware": {
                 "i2c_bus": 1,
                 "poll_interval": 30,
+                "dosing_policy": deepcopy(DEFAULT_DOSING_POLICY),
                 "device_assignments": [],
                 "dosing_fluids": [
                     {"id": "ph_up", "name": "pH+", "required": True},
@@ -63,6 +64,23 @@ class HydroponicSystemStore:
             ):
                 migrated = True
         self.data["hardware"].update(stored.get("hardware", {}))
+        policy = self.data["hardware"].setdefault("dosing_policy", {})
+        for key, value in DEFAULT_DOSING_POLICY.items():
+            if key not in policy:
+                policy[key] = value
+                migrated = True
+        # Until each pump is measured physically, use the user's common
+        # 1 ml/s baseline for every configured channel.
+        for assignment in self.data["hardware"].get("device_assignments", []):
+            if assignment.get("driver") != "waveshare_motor_hat":
+                continue
+            for channel in assignment.get("channels", []):
+                if not channel.get("calibration"):
+                    channel["calibration"] = {
+                        "seconds": 1.0, "volume_ml": 1.0, "speed": 100,
+                        "flow_ml_s": 1.0, "calibrated_at": "",
+                    }
+                    migrated = True
         self.data["calendar"].update(stored.get("calendar", {}))
         self.data["cultivation"].update(stored.get("cultivation", {}))
         if not self.data["cultivation"].get("plan"):

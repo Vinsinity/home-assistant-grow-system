@@ -54,11 +54,23 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/hydroponic-system-static/hydroponic-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.24.7"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.24.8"
 PANEL_PATH = "hydroponic-system"
 PANEL_COMPONENT = "hydroponic-system-panel"
 
 STAGE_ORDER = ["germination", "early_veg", "veg", "bloom", "darkness", "harvest"]
+
+DEFAULT_DOSING_POLICY = {
+    "nutrient_interval_minutes": 360,
+    "mixing_wait_minutes": 20,
+    "remeasure_wait_minutes": 10,
+    "ph_interval_minutes": 30,
+    "ph_deadband": 0.10,
+    "max_nutrient_dose_ml": 10.0,
+    "max_ph_dose_ml": 1.0,
+    "ph_single_direction": True,
+    "sequence": "nutrients_mix_remeasure_ph",
+}
 
 DEFAULT_CULTIVATION_PLAN = [
     {"stage": "germination", "minimum_days": 4, "maximum_days": 8, "planned_days": 6},

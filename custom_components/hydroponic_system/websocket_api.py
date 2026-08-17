@@ -10,7 +10,7 @@ import voluptuous as vol
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
-from .const import CONTROL_KEYS, DEFAULT_CULTIVATION_PLAN, DOMAIN, SENSOR_KEYS, STAGE_ORDER
+from .const import CONTROL_KEYS, DEFAULT_CULTIVATION_PLAN, DEFAULT_DOSING_POLICY, DOMAIN, SENSOR_KEYS, STAGE_ORDER
 from .entity_map import resolve_entities
 from .readiness import cultivation_readiness
 
@@ -213,6 +213,7 @@ def _address(value) -> int:
         vol.Required("poll_interval"): vol.All(int, vol.Range(min=10, max=300)),
         vol.Optional("device_assignments", default=[]): list,
         vol.Optional("dosing_fluids", default=[]): list,
+        vol.Optional("dosing_policy", default={}): dict,
     }
 )
 @websocket_api.require_admin
@@ -315,6 +316,7 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             "poll_interval": msg["poll_interval"],
             "device_assignments": assignments,
             "dosing_fluids": dosing_fluids,
+            "dosing_policy": _dosing_policy(msg.get("dosing_policy")),
         }
     )
     coordinator = hass.data[DOMAIN].get("atlas_i2c")
@@ -327,6 +329,22 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             connection.send_error(msg["id"], "hardware_refresh_failed", str(err))
             return
     connection.send_result(msg["id"], {"hardware": hardware, "reloading": False})
+
+
+def _dosing_policy(value) -> dict:
+    """Validate the future closed-loop dosing order and safety intervals."""
+    value = value if isinstance(value, dict) else {}
+    return {
+        "nutrient_interval_minutes": max(30, min(1440, int(value.get("nutrient_interval_minutes", DEFAULT_DOSING_POLICY["nutrient_interval_minutes"])))),
+        "mixing_wait_minutes": max(5, min(180, int(value.get("mixing_wait_minutes", DEFAULT_DOSING_POLICY["mixing_wait_minutes"])))),
+        "remeasure_wait_minutes": max(1, min(60, int(value.get("remeasure_wait_minutes", DEFAULT_DOSING_POLICY["remeasure_wait_minutes"])))),
+        "ph_interval_minutes": max(10, min(360, int(value.get("ph_interval_minutes", DEFAULT_DOSING_POLICY["ph_interval_minutes"])))),
+        "ph_deadband": max(0.02, min(1.0, round(float(value.get("ph_deadband", DEFAULT_DOSING_POLICY["ph_deadband"])), 2))),
+        "max_nutrient_dose_ml": max(0.1, min(500.0, round(float(value.get("max_nutrient_dose_ml", DEFAULT_DOSING_POLICY["max_nutrient_dose_ml"])), 2))),
+        "max_ph_dose_ml": max(0.1, min(50.0, round(float(value.get("max_ph_dose_ml", DEFAULT_DOSING_POLICY["max_ph_dose_ml"])), 2))),
+        "ph_single_direction": True,
+        "sequence": "nutrients_mix_remeasure_ph",
+    }
 
 
 def _motor_calibration(value) -> dict | None:
