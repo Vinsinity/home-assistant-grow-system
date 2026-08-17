@@ -58,8 +58,13 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
         except (OSError, ImportError) as err:
             self.diagnostic["error"] = f"{type(err).__name__}: {err}"
             return False
-        self.diagnostic.update(
-            {
+        self._apply_discovery(self.devices, motor_hats, discovered)
+        return True
+
+    def _apply_discovery(self, devices, motor_hats, discovered) -> None:
+        """Publish one discovery result without replacing the coordinator."""
+        self.devices = devices
+        self.diagnostic.update({
                 "available": True,
                 "error": None,
                 "devices": [
@@ -72,9 +77,26 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
                 ],
                 "motor_hats": motor_hats,
                 "discovered_devices": discovered,
-            }
+            })
+
+    async def async_reconfigure(self, hardware: dict) -> None:
+        """Apply hardware assignments live and refresh measurements."""
+        self.hardware = hardware
+        self.assignments = {
+            int(item["address"]): item
+            for item in hardware.get("device_assignments", [])
+            if "address" in item
+        }
+        self.update_interval = timedelta(
+            seconds=max(10, min(300, int(hardware.get("poll_interval", 30))))
         )
-        return bool(self.devices)
+        async with self._bus_lock:
+            devices, motor_hats, discovered = await self.hass.async_add_executor_job(
+                self._discover
+            )
+            self._apply_discovery(devices, motor_hats, discovered)
+            data = await self.hass.async_add_executor_job(self._read_all)
+        self.async_set_updated_data(data)
 
     def _discover(self):
         atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}

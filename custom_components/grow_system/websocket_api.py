@@ -202,7 +202,7 @@ def _address(value) -> int:
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_save_hardware(hass, connection, msg) -> None:
-    """Save native I2C preferences and reload the integration."""
+    """Save native I2C preferences and apply them without a reload."""
     try:
         assignments = []
         assigned = set()
@@ -294,22 +294,6 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
         connection.send_error(msg["id"], "invalid_assignment", str(err))
         return
     store = hass.data[DOMAIN]["store"]
-    previous = store.data.get("hardware", {})
-    atlas_drivers = {"atlas_do", "atlas_ph", "atlas_ec", "atlas_rtd"}
-    previous_atlas = {
-        (item.get("address"), item.get("driver"))
-        for item in previous.get("device_assignments", [])
-        if item.get("driver") in atlas_drivers
-    }
-    next_atlas = {
-        (item.get("address"), item.get("driver"))
-        for item in assignments
-        if item.get("driver") in atlas_drivers
-    }
-    reload_required = (
-        previous_atlas != next_atlas
-        or int(previous.get("poll_interval", 30)) != msg["poll_interval"]
-    )
     hardware = await store.async_update_hardware(
         {
             "poll_interval": msg["poll_interval"],
@@ -317,12 +301,16 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             "dosing_fluids": dosing_fluids,
         }
     )
-    connection.send_result(
-        msg["id"], {"hardware": hardware, "reloading": reload_required}
-    )
-    if reload_required:
-        entry = hass.data[DOMAIN]["entry"]
-        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+    coordinator = hass.data[DOMAIN].get("atlas_i2c")
+    if coordinator is not None:
+        try:
+            await coordinator.async_reconfigure(hardware)
+            from .sensor import async_sync_atlas_entities
+            await async_sync_atlas_entities(hass, hass.data[DOMAIN]["entry"])
+        except (OSError, ValueError, RuntimeError) as err:
+            connection.send_error(msg["id"], "hardware_refresh_failed", str(err))
+            return
+    connection.send_result(msg["id"], {"hardware": hardware, "reloading": False})
 
 
 def _motor_calibration(value) -> dict | None:

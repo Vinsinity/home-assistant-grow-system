@@ -47,25 +47,43 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Create sensors for circuits found during safe discovery."""
-    coordinator: AtlasI2CCoordinator = hass.data[DOMAIN]["atlas_i2c"]
-    if not coordinator.devices or not coordinator.data:
+    runtime = hass.data[DOMAIN].setdefault("sensor_runtime", {})
+    runtime["async_add_entities"] = async_add_entities
+    runtime.setdefault("known_unique_ids", set())
+    await async_sync_atlas_entities(hass, entry)
+
+
+async def async_sync_atlas_entities(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> None:
+    """Add newly enrolled Atlas channels without reloading the integration."""
+    runtime = hass.data[DOMAIN].get("sensor_runtime")
+    if not runtime or "async_add_entities" not in runtime:
         return
+    coordinator: AtlasI2CCoordinator = hass.data[DOMAIN]["atlas_i2c"]
 
     entities: list[AtlasEzoSensor] = []
+    known: set[str] = runtime.setdefault("known_unique_ids", set())
     for device in coordinator.devices:
         primary = PRIMARY_CHANNELS.get(device.device_type.lower())
         if primary is None:
             continue
-        entities.append(AtlasEzoSensor(coordinator, entry, device, primary))
+        candidates = [primary]
 
         values = coordinator.data.get(device.key, {}).get("values", ())
         if device.device_type.lower() == "ec":
-            entities.extend(
-                AtlasEzoSensor(coordinator, entry, device, channel)
-                for channel in EC_OPTIONAL_CHANNELS
+            candidates.extend(
+                channel for channel in EC_OPTIONAL_CHANNELS
                 if channel.index < len(values)
             )
-    async_add_entities(entities)
+        for channel in candidates:
+            unique_id = f"{entry.entry_id}_atlas_{device.address:02x}_{channel.suffix}"
+            if unique_id in known:
+                continue
+            known.add(unique_id)
+            entities.append(AtlasEzoSensor(coordinator, entry, device, channel))
+    if entities:
+        runtime["async_add_entities"](entities)
 
 
 class AtlasEzoSensor(CoordinatorEntity[AtlasI2CCoordinator], SensorEntity):
