@@ -77,6 +77,25 @@ class AtlasEzoBusTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             bus.calibrate(atlas_ezo.AtlasDevice(0x61, "DO"), "mid", 7)
 
+    def test_management_command(self):
+        transport = FakeTransport([b"\x01?Status,P,3.30\x00"])
+        bus = atlas_ezo.AtlasEzoBus(transport=transport, sleep=lambda _: None)
+        result = bus.device_command(atlas_ezo.AtlasDevice(0x63, "pH"), "Status")
+        self.assertEqual("?Status,P,3.30", result)
+        self.assertEqual([(0x63, b"Status")], transport.writes)
+
+    def test_address_change_is_write_only(self):
+        transport = FakeTransport([])
+        bus = atlas_ezo.AtlasEzoBus(transport=transport, sleep=lambda _: None)
+        bus.change_address(atlas_ezo.AtlasDevice(0x63, "pH"), 0x65)
+        self.assertEqual([(0x63, b"I2C,101")], transport.writes)
+
+    def test_protected_commands_are_rejected(self):
+        bus = atlas_ezo.AtlasEzoBus(transport=FakeTransport([]), sleep=lambda _: None)
+        for command in ("Factory", "I2C,101", "Cal,mid,7"):
+            with self.assertRaises(ValueError):
+                bus.device_command(atlas_ezo.AtlasDevice(0x63, "pH"), command)
+
 
 if __name__ == "__main__":
     unittest.main()

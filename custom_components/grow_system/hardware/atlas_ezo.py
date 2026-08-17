@@ -1,7 +1,7 @@
 """Small, testable Atlas Scientific EZO I2C driver.
 
-Only read-only commands are used here. Pump/motor control deliberately lives outside
-this module so discovering probes can never actuate equipment.
+Discovery remains read-only. Mutating management commands are exposed only through
+explicitly confirmed, validated Home Assistant workflows.
 """
 
 from __future__ import annotations
@@ -121,6 +121,28 @@ class AtlasEzoBus:
             return raw[1:].split(b"\x00", 1)[0].decode("ascii").strip()
 
         raise AtlasProtocolError(f"0x{address:02x}: response timed out")
+
+    def write_only(self, address: int, command: str, *, processing_time: float = 0.4) -> None:
+        """Send a command that intentionally reboots before returning a response."""
+        self._transport.write(address, command.encode("ascii"))
+        self._sleep(processing_time)
+
+    def change_address(self, device: AtlasDevice, new_address: int) -> None:
+        """Change a circuit address; the EZO reboots without a readable reply."""
+        if not 1 <= new_address <= 127:
+            raise ValueError("Atlas I2C address must be between 1 and 127")
+        self.write_only(device.address, f"I2C,{new_address}")
+
+    def device_command(self, device: AtlasDevice, command: str) -> str:
+        """Run one explicitly confirmed non-destructive management command."""
+        clean = command.strip()
+        if not clean or len(clean) > 48 or not clean.isascii():
+            raise ValueError("Command must be 1-48 ASCII characters")
+        blocked = {"factory", "i2c", "baud", "sleep", "cal"}
+        root = clean.split(",", 1)[0].lower()
+        if root in blocked:
+            raise ValueError(f"{root} must use its dedicated protected workflow")
+        return self.command(device.address, clean, processing_time=0.7)
 
     def identify(self, address: int) -> AtlasDevice:
         """Identify a circuit using the read-only information command."""

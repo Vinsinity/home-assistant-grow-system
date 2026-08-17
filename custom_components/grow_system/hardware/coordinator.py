@@ -189,3 +189,33 @@ class AtlasI2CCoordinator(DataUpdateCoordinator[dict[str, dict]]):
             return bus.calibrate(device, operation, value)
         finally:
             bus.close()
+
+    async def async_device_command(self, address: int, command: str) -> str:
+        """Run a confirmed management command while polling is locked."""
+        device = self._device_at(address)
+        async with self._bus_lock:
+            return await self.hass.async_add_executor_job(
+                self._device_command, device, command
+            )
+
+    def _device_command(self, device: AtlasDevice, command: str) -> str:
+        bus = AtlasEzoBus(self.bus_number)
+        try:
+            return bus.device_command(device, command)
+        finally:
+            bus.close()
+
+    async def async_change_address(self, address: int, new_address: int) -> None:
+        """Change the hardware address while preventing concurrent polling."""
+        device = self._device_at(address)
+        async with self._bus_lock:
+            await self.hass.async_add_executor_job(
+                self._change_address, device, new_address
+            )
+
+    def _change_address(self, device: AtlasDevice, new_address: int) -> None:
+        bus = AtlasEzoBus(self.bus_number)
+        try:
+            bus.change_address(device, new_address)
+        finally:
+            bus.close()

@@ -344,6 +344,72 @@ async def websocket_calibrate(hass, connection, msg) -> None:
     connection.send_result(msg["id"], {"address": address, "result": result})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/atlas_command",
+        vol.Required("address"): vol.Any(int, str),
+        vol.Required("command"): str,
+        vol.Required("confirmed"): True,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_atlas_command(hass, connection, msg) -> None:
+    """Run an explicitly confirmed Atlas management command."""
+    try:
+        address = _address(msg["address"])
+        result = await hass.data[DOMAIN]["atlas_i2c"].async_device_command(
+            address, msg["command"]
+        )
+    except (TypeError, ValueError, OSError, RuntimeError) as err:
+        connection.send_error(msg["id"], "atlas_command_failed", str(err))
+        return
+    connection.send_result(
+        msg["id"], {"address": address, "command": msg["command"], "result": result}
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/hardware/atlas_change_address",
+        vol.Required("address"): vol.Any(int, str),
+        vol.Required("new_address"): vol.Any(int, str),
+        vol.Required("confirmed"): True,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_atlas_change_address(hass, connection, msg) -> None:
+    """Change an Atlas address and its persisted assignment as one workflow."""
+    try:
+        old_address = _address(msg["address"])
+        new_address = _address(msg["new_address"])
+        if old_address == new_address:
+            raise ValueError("New address is identical to the current address")
+        store = hass.data[DOMAIN]["store"]
+        assignments = store.data.get("hardware", {}).get("device_assignments", [])
+        if any(int(item.get("address", -1)) == new_address for item in assignments):
+            raise ValueError(f"I2C address 0x{new_address:02X} is already assigned")
+        await hass.data[DOMAIN]["atlas_i2c"].async_change_address(
+            old_address, new_address
+        )
+        for item in assignments:
+            if int(item.get("address", -1)) == old_address:
+                item["address"] = new_address
+                break
+        else:
+            raise ValueError(f"No saved assignment exists at 0x{old_address:02X}")
+        await store.async_save()
+    except (TypeError, ValueError, OSError, RuntimeError) as err:
+        connection.send_error(msg["id"], "atlas_address_change_failed", str(err))
+        return
+    connection.send_result(
+        msg["id"], {"old_address": old_address, "new_address": new_address, "reloading": True}
+    )
+    entry = hass.data[DOMAIN]["entry"]
+    hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+
 def async_register(hass: HomeAssistant) -> None:
     """Register WebSocket commands."""
     websocket_api.async_register_command(hass, websocket_get_config)
@@ -355,3 +421,5 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save_hardware)
     websocket_api.async_register_command(hass, websocket_calibration_status)
     websocket_api.async_register_command(hass, websocket_calibrate)
+    websocket_api.async_register_command(hass, websocket_atlas_command)
+    websocket_api.async_register_command(hass, websocket_atlas_change_address)
