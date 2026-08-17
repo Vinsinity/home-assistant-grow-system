@@ -52,11 +52,19 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.12.2"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.15.0"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 
 STAGE_ORDER = ["germination", "early_veg", "veg", "bloom", "darkness"]
+
+DEFAULT_CULTIVATION_PLAN = [
+    {"stage": "germination", "minimum_days": 4, "maximum_days": 8, "planned_days": 6},
+    {"stage": "early_veg", "minimum_days": 10, "maximum_days": 15, "planned_days": 12},
+    {"stage": "veg", "minimum_days": 21, "maximum_days": 28, "planned_days": 24},
+    {"stage": "bloom", "minimum_days": 42, "maximum_days": 56, "planned_days": 49},
+    {"stage": "darkness", "minimum_days": 3, "maximum_days": 3, "planned_days": 3},
+]
 
 DEFAULT_PROFILES = {
     "germination": {

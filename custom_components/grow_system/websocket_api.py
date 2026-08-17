@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
+from uuid import uuid4
+
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant
 
-from .const import CONTROL_KEYS, DOMAIN, SENSOR_KEYS, STAGE_ORDER
+from .const import CONTROL_KEYS, DEFAULT_CULTIVATION_PLAN, DOMAIN, SENSOR_KEYS, STAGE_ORDER
 from .entity_map import resolve_entities
 
 
@@ -96,8 +99,66 @@ async def websocket_select_stage(hass, connection, msg) -> None:
     """Select a stage without enabling the future control engine."""
     store = hass.data[DOMAIN]["store"]
     store.data["active_stage"] = msg["stage"]
+    cultivation = store.data.get("cultivation", {})
+    if cultivation.get("active"):
+        transitions = cultivation.setdefault("transitions", [])
+        if not transitions or transitions[-1].get("stage") != msg["stage"]:
+            transitions.append({"stage": msg["stage"], "date": date.today().isoformat()})
     await store.async_save()
     connection.send_result(msg["id"], {"active_stage": msg["stage"]})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): "grow_system/cultivation/start",
+        vol.Optional("name", default=""): str,
+        vol.Optional("start_date", default=""): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_start_cultivation(hass, connection, msg) -> None:
+    """Start a dated cultivation journal without forcing stage transitions."""
+    store = hass.data[DOMAIN]["store"]
+    if store.data.get("cultivation", {}).get("active"):
+        connection.send_error(msg["id"], "already_active", "A cultivation is already active")
+        return
+    start_date = msg.get("start_date") or date.today().isoformat()
+    try:
+        date.fromisoformat(start_date)
+    except ValueError:
+        connection.send_error(msg["id"], "invalid_date", "Start date must be YYYY-MM-DD")
+        return
+    cultivation = {
+        "active": True,
+        "id": uuid4().hex,
+        "name": (msg.get("name") or f"Yetiştirme · {start_date}")[:80],
+        "start_date": start_date,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": "",
+        "plan": [dict(item) for item in DEFAULT_CULTIVATION_PLAN],
+        "transitions": [{"stage": "germination", "date": start_date}],
+        "journal": {},
+    }
+    store.data["cultivation"] = cultivation
+    store.data["active_stage"] = "germination"
+    await store.async_save()
+    connection.send_result(msg["id"], cultivation)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): "grow_system/cultivation/finish"}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def websocket_finish_cultivation(hass, connection, msg) -> None:
+    """Finish the active cultivation while retaining its journal."""
+    store = hass.data[DOMAIN]["store"]
+    cultivation = store.data.setdefault("cultivation", {})
+    cultivation["active"] = False
+    cultivation["completed_at"] = datetime.now(timezone.utc).isoformat()
+    await store.async_save()
+    connection.send_result(msg["id"], cultivation)
 
 
 def _address(value) -> int:
@@ -289,6 +350,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, websocket_save_entities)
     websocket_api.async_register_command(hass, websocket_save_profile)
     websocket_api.async_register_command(hass, websocket_select_stage)
+    websocket_api.async_register_command(hass, websocket_start_cultivation)
+    websocket_api.async_register_command(hass, websocket_finish_cultivation)
     websocket_api.async_register_command(hass, websocket_save_hardware)
     websocket_api.async_register_command(hass, websocket_calibration_status)
     websocket_api.async_register_command(hass, websocket_calibrate)

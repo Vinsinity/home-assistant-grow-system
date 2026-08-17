@@ -8,7 +8,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.storage import Store
 
-from .const import DEFAULT_PROFILES, STORAGE_KEY, STORAGE_VERSION
+from .const import DEFAULT_CULTIVATION_PLAN, DEFAULT_PROFILES, STORAGE_KEY, STORAGE_VERSION
 
 
 class GrowSystemStore:
@@ -22,6 +22,12 @@ class GrowSystemStore:
             "active_stage": "darkness",
             "engine_enabled": False,
             "profiles": deepcopy(DEFAULT_PROFILES),
+            "cultivation": {
+                "active": False, "id": "", "name": "", "start_date": "",
+                "started_at": "", "completed_at": "",
+                "plan": deepcopy(DEFAULT_CULTIVATION_PLAN),
+                "transitions": [], "journal": {},
+            },
             "hardware": {
                 "i2c_bus": 1,
                 "poll_interval": 30,
@@ -46,6 +52,9 @@ class GrowSystemStore:
         for stage, defaults in DEFAULT_PROFILES.items():
             self.data["profiles"][stage].update(stored_profiles.get(stage, {}))
         self.data["hardware"].update(stored.get("hardware", {}))
+        self.data["cultivation"].update(stored.get("cultivation", {}))
+        if not self.data["cultivation"].get("plan"):
+            self.data["cultivation"]["plan"] = deepcopy(DEFAULT_CULTIVATION_PLAN)
 
     async def async_save(self) -> None:
         """Persist current data."""
