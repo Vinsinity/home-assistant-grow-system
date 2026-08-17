@@ -142,6 +142,9 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
             dosing_fluids.append({
                 "id": fluid_id,
                 "name": str(fluid.get("name") or fluid_id)[:64],
+                "brand": str(fluid.get("brand") or "Özel")[:64],
+                "category": str(fluid.get("category") or "other")[:32],
+                "catalog_id": str(fluid.get("catalog_id") or "")[:96],
                 "required": False,
             })
         for item in msg.get("device_assignments", []):
