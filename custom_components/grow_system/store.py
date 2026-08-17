@@ -22,6 +22,7 @@ class GrowSystemStore:
             "active_stage": "darkness",
             "engine_enabled": False,
             "profiles": deepcopy(DEFAULT_PROFILES),
+            "calendar": {"journal": {}},
             "cultivation": {
                 "active": False, "id": "", "name": "", "start_date": "",
                 "started_at": "", "completed_at": "",
@@ -52,6 +53,7 @@ class GrowSystemStore:
         for stage, defaults in DEFAULT_PROFILES.items():
             self.data["profiles"][stage].update(stored_profiles.get(stage, {}))
         self.data["hardware"].update(stored.get("hardware", {}))
+        self.data["calendar"].update(stored.get("calendar", {}))
         self.data["cultivation"].update(stored.get("cultivation", {}))
         if not self.data["cultivation"].get("plan"):
             self.data["cultivation"]["plan"] = deepcopy(DEFAULT_CULTIVATION_PLAN)
