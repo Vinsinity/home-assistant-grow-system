@@ -19,7 +19,7 @@ class GrowSystemStore:
             hass, STORAGE_VERSION, STORAGE_KEY
         )
         self.data: dict[str, Any] = {
-            "active_stage": "darkness",
+            "active_stage": None,
             "engine_enabled": False,
             "profiles": deepcopy(DEFAULT_PROFILES),
             "calendar": {"journal": {}},
@@ -47,7 +47,7 @@ class GrowSystemStore:
             await self.async_save()
             return
 
-        self.data["active_stage"] = stored.get("active_stage", "darkness")
+        self.data["active_stage"] = stored.get("active_stage")
         self.data["engine_enabled"] = stored.get("engine_enabled", False)
         stored_profiles = stored.get("profiles", {})
         for stage, defaults in DEFAULT_PROFILES.items():
@@ -57,6 +57,14 @@ class GrowSystemStore:
         self.data["cultivation"].update(stored.get("cultivation", {}))
         if not self.data["cultivation"].get("plan"):
             self.data["cultivation"]["plan"] = deepcopy(DEFAULT_CULTIVATION_PLAN)
+        # A stage only has operational meaning inside an active cultivation.
+        # Normalize older documents that stored "darkness" while no cycle existed.
+        if (
+            not self.data["cultivation"].get("active")
+            and self.data.get("active_stage") is not None
+        ):
+            self.data["active_stage"] = None
+            await self.async_save()
 
     async def async_save(self) -> None:
         """Persist current data."""

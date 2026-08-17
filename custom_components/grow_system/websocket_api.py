@@ -96,14 +96,19 @@ async def websocket_save_profile(hass, connection, msg) -> None:
 @websocket_api.require_admin
 @websocket_api.async_response
 async def websocket_select_stage(hass, connection, msg) -> None:
-    """Select a stage without enabling the future control engine."""
+    """Select a stage for an active cultivation."""
     store = hass.data[DOMAIN]["store"]
-    store.data["active_stage"] = msg["stage"]
     cultivation = store.data.get("cultivation", {})
-    if cultivation.get("active"):
-        transitions = cultivation.setdefault("transitions", [])
-        if not transitions or transitions[-1].get("stage") != msg["stage"]:
-            transitions.append({"stage": msg["stage"], "date": date.today().isoformat()})
+    if not cultivation.get("active"):
+        connection.send_error(
+            msg["id"], "no_active_cultivation",
+            "A stage cannot be activated before cultivation starts",
+        )
+        return
+    store.data["active_stage"] = msg["stage"]
+    transitions = cultivation.setdefault("transitions", [])
+    if not transitions or transitions[-1].get("stage") != msg["stage"]:
+        transitions.append({"stage": msg["stage"], "date": date.today().isoformat()})
     await store.async_save()
     connection.send_result(msg["id"], {"active_stage": msg["stage"]})
 
@@ -157,6 +162,7 @@ async def websocket_finish_cultivation(hass, connection, msg) -> None:
     cultivation = store.data.setdefault("cultivation", {})
     cultivation["active"] = False
     cultivation["completed_at"] = datetime.now(timezone.utc).isoformat()
+    store.data["active_stage"] = None
     await store.async_save()
     connection.send_result(msg["id"], cultivation)
 
