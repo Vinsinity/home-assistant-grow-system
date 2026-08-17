@@ -141,6 +141,12 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
                 "brand": str(fluid.get("brand") or "Belirtilmedi")[:64],
                 "category": "ph",
                 "catalog_id": str(fluid.get("catalog_id") or "")[:96],
+                "line": str(fluid.get("line") or "")[:64],
+                "part": str(fluid.get("part") or "")[:32],
+                "npk": str(fluid.get("npk") or "")[:32],
+                "phase": str(fluid.get("phase") or "")[:32],
+                "medium": str(fluid.get("medium") or "")[:32],
+                "ph_direction": str(fluid.get("ph_direction") or "")[:8],
                 "required": True,
             })
         fluid_ids = {"ph_up", "ph_down"}
@@ -157,6 +163,12 @@ async def websocket_save_hardware(hass, connection, msg) -> None:
                 "brand": str(fluid.get("brand") or "Özel")[:64],
                 "category": str(fluid.get("category") or "other")[:32],
                 "catalog_id": str(fluid.get("catalog_id") or "")[:96],
+                "line": str(fluid.get("line") or "")[:64],
+                "part": str(fluid.get("part") or "")[:32],
+                "npk": str(fluid.get("npk") or "")[:32],
+                "phase": str(fluid.get("phase") or "")[:32],
+                "medium": str(fluid.get("medium") or "")[:32],
+                "ph_direction": str(fluid.get("ph_direction") or "")[:8],
                 "required": False,
             })
         for item in msg.get("device_assignments", []):
