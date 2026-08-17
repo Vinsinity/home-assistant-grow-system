@@ -84,6 +84,13 @@ async def websocket_save_profile(hass, connection, msg) -> None:
     except ValueError as err:
         connection.send_error(msg["id"], "invalid_stage", str(err))
         return
+    cultivation = store.data.get("cultivation", {})
+    if cultivation.get("active"):
+        for block in cultivation.get("plan", []):
+            if block.get("stage") == msg["stage"]:
+                block["planned_days"] = max(1, min(365, int(profile["planned_days"])))
+                await store.async_save()
+                break
     connection.send_result(msg["id"], profile)
 
 
@@ -134,6 +141,15 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
     except ValueError:
         connection.send_error(msg["id"], "invalid_date", "Start date must be YYYY-MM-DD")
         return
+    plan = []
+    defaults_by_stage = {item["stage"]: item for item in DEFAULT_CULTIVATION_PLAN}
+    for stage in STAGE_ORDER:
+        defaults = defaults_by_stage[stage]
+        profile = store.data["profiles"][stage]
+        plan.append({
+            **defaults,
+            "planned_days": max(1, min(365, int(profile["planned_days"]))),
+        })
     cultivation = {
         "active": True,
         "id": uuid4().hex,
@@ -141,7 +157,7 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
         "start_date": start_date,
         "started_at": datetime.now(timezone.utc).isoformat(),
         "completed_at": "",
-        "plan": [dict(item) for item in DEFAULT_CULTIVATION_PLAN],
+        "plan": plan,
         "transitions": [{"stage": "germination", "date": start_date}],
         "journal": {},
     }

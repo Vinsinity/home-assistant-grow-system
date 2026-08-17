@@ -52,11 +52,11 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.17.5"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.18.0"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 
-STAGE_ORDER = ["germination", "early_veg", "veg", "bloom", "darkness"]
+STAGE_ORDER = ["germination", "early_veg", "veg", "bloom", "darkness", "harvest"]
 
 DEFAULT_CULTIVATION_PLAN = [
     {"stage": "germination", "minimum_days": 4, "maximum_days": 8, "planned_days": 6},
@@ -64,11 +64,13 @@ DEFAULT_CULTIVATION_PLAN = [
     {"stage": "veg", "minimum_days": 21, "maximum_days": 28, "planned_days": 24},
     {"stage": "bloom", "minimum_days": 42, "maximum_days": 56, "planned_days": 49},
     {"stage": "darkness", "minimum_days": 3, "maximum_days": 3, "planned_days": 3},
+    {"stage": "harvest", "minimum_days": 7, "maximum_days": 14, "planned_days": 10},
 ]
 
 DEFAULT_PROFILES = {
     "germination": {
         "name": "Germination",
+        "planned_days": 6,
         "photoperiod": 24,
         "light_intensity": 30,
         "day_temperature": 25,
@@ -83,6 +85,7 @@ DEFAULT_PROFILES = {
     },
     "early_veg": {
         "name": "Early Veg",
+        "planned_days": 12,
         "photoperiod": 20,
         "light_intensity": 50,
         "day_temperature": 25,
@@ -97,6 +100,7 @@ DEFAULT_PROFILES = {
     },
     "veg": {
         "name": "Veg",
+        "planned_days": 24,
         "photoperiod": 18,
         "light_intensity": 75,
         "day_temperature": 26,
@@ -111,6 +115,7 @@ DEFAULT_PROFILES = {
     },
     "bloom": {
         "name": "Bloom",
+        "planned_days": 49,
         "photoperiod": 12,
         "light_intensity": 100,
         "day_temperature": 25,
@@ -125,6 +130,7 @@ DEFAULT_PROFILES = {
     },
     "darkness": {
         "name": "Darkness",
+        "planned_days": 3,
         "photoperiod": 0,
         "light_intensity": 0,
         "day_temperature": 21,
@@ -136,5 +142,20 @@ DEFAULT_PROFILES = {
         "water_temperature": 19,
         "ph": 5.8,
         "do_minimum": 6,
+    },
+    "harvest": {
+        "name": "Harvest / Drying",
+        "planned_days": 10,
+        "photoperiod": 0,
+        "light_intensity": 0,
+        "day_temperature": 19,
+        "night_temperature": 18,
+        "humidity": 55,
+        "vpd": 0.95,
+        "co2": 450,
+        "ppm": 0,
+        "water_temperature": 19,
+        "ph": 5.8,
+        "do_minimum": 0,
     },
 }
