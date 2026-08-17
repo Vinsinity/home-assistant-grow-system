@@ -15,6 +15,17 @@ from .entity_map import resolve_entities
 from .readiness import cultivation_readiness
 
 
+def _live_atlas_drivers(atlas) -> set[str]:
+    """Return drivers for Atlas circuits that are currently discovered."""
+    if atlas is None:
+        return set()
+    return {
+        f"atlas_{str(device.device_type).lower()}"
+        for device in atlas.devices
+        if device.key in (atlas.data or {})
+    }
+
+
 @websocket_api.websocket_command({vol.Required("type"): "hydroponic_system/config/get"})
 @websocket_api.async_response
 async def websocket_get_config(hass, connection, msg) -> None:
@@ -24,7 +35,9 @@ async def websocket_get_config(hass, connection, msg) -> None:
     entities = resolve_entities(hass, configured)
     hass.data[DOMAIN]["entities"] = entities
     atlas = hass.data[DOMAIN].get("atlas_i2c")
-    readiness = cultivation_readiness(entities, store.data.get("hardware", {}))
+    readiness = cultivation_readiness(
+        entities, store.data.get("hardware", {}), _live_atlas_drivers(atlas)
+    )
     connection.send_result(
         msg["id"],
         {
@@ -140,7 +153,11 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
         return
     configured = hass.data[DOMAIN].get("configured_entities", {})
     entities = resolve_entities(hass, configured)
-    readiness = cultivation_readiness(entities, store.data.get("hardware", {}))
+    readiness = cultivation_readiness(
+        entities,
+        store.data.get("hardware", {}),
+        _live_atlas_drivers(hass.data[DOMAIN].get("atlas_i2c")),
+    )
     if not readiness["ready"]:
         labels = ", ".join(item["label"] for item in readiness["missing"])
         connection.send_error(

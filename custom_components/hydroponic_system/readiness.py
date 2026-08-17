@@ -22,7 +22,9 @@ def _has_entity(value: Any) -> bool:
     return isinstance(value, str) and bool(value)
 
 
-def cultivation_readiness(entities: dict, hardware: dict) -> dict:
+def cultivation_readiness(
+    entities: dict, hardware: dict, live_native_drivers: set[str] | None = None
+) -> dict:
     """Build the minimum monitoring checklist for cultivation start."""
     assignments = hardware.get("device_assignments", [])
     enrolled_drivers = {
@@ -30,10 +32,11 @@ def cultivation_readiness(entities: dict, hardware: dict) -> dict:
         for item in assignments
         if isinstance(item, dict) and item.get("driver")
     }
+    native_drivers = enrolled_drivers if live_native_drivers is None else live_native_drivers
     requirements = []
     for key, label, entity_key, native_driver in MONITORING_REQUIREMENTS:
         mapped = _has_entity(entities.get(entity_key))
-        native = bool(native_driver and native_driver in enrolled_drivers)
+        native = bool(native_driver and native_driver in native_drivers)
         requirements.append({
             "key": key,
             "label": label,

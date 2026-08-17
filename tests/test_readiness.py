@@ -33,3 +33,14 @@ def test_readiness_reports_each_missing_core_measurement():
         "temperature", "humidity", "ph", "nutrient",
         "water_temperature", "dissolved_oxygen",
     ]
+
+
+def test_enrolled_but_offline_native_sensor_is_not_ready():
+    entities = {
+        "temperature_sensors": ["sensor.tent_temperature"],
+        "humidity_sensors": ["sensor.tent_humidity"],
+    }
+    hardware = {"device_assignments": [{"driver": "atlas_ph"}]}
+    result = cultivation_readiness(entities, hardware, live_native_drivers=set())
+    assert result["ready"] is False
+    assert "ph" in [item["key"] for item in result["missing"]]
