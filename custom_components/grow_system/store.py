@@ -53,6 +53,11 @@ class GrowSystemStore:
         stored_profiles = stored.get("profiles", {})
         for stage, defaults in DEFAULT_PROFILES.items():
             self.data["profiles"][stage].update(stored_profiles.get(stage, {}))
+            # Profile names are canonical UI labels, not user data. Refresh old
+            # persisted English labels without changing stable internal keys.
+            if self.data["profiles"][stage].get("name") != defaults["name"]:
+                self.data["profiles"][stage]["name"] = defaults["name"]
+                migrated = True
             if stage not in stored_profiles or any(
                 key not in stored_profiles.get(stage, {}) for key in defaults
             ):

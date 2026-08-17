@@ -52,7 +52,7 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.18.1"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.18.2"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 
@@ -69,7 +69,7 @@ DEFAULT_CULTIVATION_PLAN = [
 
 DEFAULT_PROFILES = {
     "germination": {
-        "name": "Germination",
+        "name": "Çimlenme",
         "planned_days": 6,
         "photoperiod": 24,
         "light_intensity": 30,
@@ -84,7 +84,7 @@ DEFAULT_PROFILES = {
         "do_minimum": 6,
     },
     "early_veg": {
-        "name": "Early Veg",
+        "name": "Erken gelişim",
         "planned_days": 12,
         "photoperiod": 20,
         "light_intensity": 50,
@@ -99,7 +99,7 @@ DEFAULT_PROFILES = {
         "do_minimum": 6,
     },
     "veg": {
-        "name": "Veg",
+        "name": "Gelişim",
         "planned_days": 24,
         "photoperiod": 18,
         "light_intensity": 75,
@@ -114,7 +114,7 @@ DEFAULT_PROFILES = {
         "do_minimum": 6,
     },
     "bloom": {
-        "name": "Bloom",
+        "name": "Çiçeklenme",
         "planned_days": 49,
         "photoperiod": 12,
         "light_intensity": 100,
@@ -129,7 +129,7 @@ DEFAULT_PROFILES = {
         "do_minimum": 6,
     },
     "darkness": {
-        "name": "Darkness",
+        "name": "Karanlık",
         "planned_days": 3,
         "photoperiod": 0,
         "light_intensity": 0,
@@ -144,7 +144,7 @@ DEFAULT_PROFILES = {
         "do_minimum": 6,
     },
     "harvest": {
-        "name": "Harvest / Drying",
+        "name": "Hasat / Kurutma",
         "planned_days": 10,
         "photoperiod": 0,
         "light_intensity": 0,
