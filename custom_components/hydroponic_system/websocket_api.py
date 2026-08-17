@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import CONTROL_KEYS, DEFAULT_CULTIVATION_PLAN, DOMAIN, SENSOR_KEYS, STAGE_ORDER
 from .entity_map import resolve_entities
+from .readiness import cultivation_readiness
 
 
 @websocket_api.websocket_command({vol.Required("type"): "hydroponic_system/config/get"})
@@ -23,6 +24,7 @@ async def websocket_get_config(hass, connection, msg) -> None:
     entities = resolve_entities(hass, configured)
     hass.data[DOMAIN]["entities"] = entities
     atlas = hass.data[DOMAIN].get("atlas_i2c")
+    readiness = cultivation_readiness(entities, store.data.get("hardware", {}))
     connection.send_result(
         msg["id"],
         {
@@ -30,6 +32,7 @@ async def websocket_get_config(hass, connection, msg) -> None:
             "hardware_config": store.data.get("hardware", {}),
             "entities": entities,
             "configured_entities": configured,
+            "cultivation_readiness": readiness,
             "hardware": {
                 "atlas_i2c": atlas.diagnostic if atlas is not None else {
                     "available": False,
@@ -134,6 +137,16 @@ async def websocket_start_cultivation(hass, connection, msg) -> None:
     store = hass.data[DOMAIN]["store"]
     if store.data.get("cultivation", {}).get("active"):
         connection.send_error(msg["id"], "already_active", "A cultivation is already active")
+        return
+    configured = hass.data[DOMAIN].get("configured_entities", {})
+    entities = resolve_entities(hass, configured)
+    readiness = cultivation_readiness(entities, store.data.get("hardware", {}))
+    if not readiness["ready"]:
+        labels = ", ".join(item["label"] for item in readiness["missing"])
+        connection.send_error(
+            msg["id"], "monitoring_not_ready",
+            f"Zorunlu izleme sensörleri eksik: {labels}",
+        )
         return
     start_date = msg.get("start_date") or date.today().isoformat()
     try:
