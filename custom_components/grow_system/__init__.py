@@ -27,6 +27,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Load profiles and expose the panel asset."""
+    if entry.title != "Hydroponic System":
+        hass.config_entries.async_update_entry(entry, title="Hydroponic System")
     store = GrowSystemStore(hass)
     await store.async_load()
     hass.data[DOMAIN]["store"] = store
@@ -63,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass,
         frontend_url_path=PANEL_PATH,
         webcomponent_name=PANEL_COMPONENT,
-        sidebar_title="Grow System",
+        sidebar_title="Hydroponic System",
         sidebar_icon="mdi:sprout",
         module_url=PANEL_MODULE_URL,
         require_admin=True,

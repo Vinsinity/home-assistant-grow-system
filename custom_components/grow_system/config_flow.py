@@ -117,7 +117,7 @@ class GrowSystemConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Configure actuator entities without enabling control."""
         if user_input is not None:
             self._data.update(user_input)
-            return self.async_create_entry(title="Grow System Extension", data=self._data)
+            return self.async_create_entry(title="Hydroponic System", data=self._data)
         return self.async_show_form(step_id="controls", data_schema=_control_schema({}))
 
     @staticmethod

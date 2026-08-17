@@ -1,10 +1,10 @@
 {
-  "title": "Grow System Extension",
+  "title": "Hydroponic System",
   "config": {
     "step": {
       "sensors": {
         "title": "İzleme sensörleri",
-        "description": "Bir veya daha fazla ortam sensör cihazı seçin. Grow System her cihazın altındaki CO2, sıcaklık ve nem entity'lerini otomatik bulur ve VPD'yi hesaplar.",
+        "description": "Bir veya daha fazla ortam sensör cihazı seçin. Hydroponic System her cihazın altındaki CO2, sıcaklık ve nem entity'lerini otomatik bulur ve VPD'yi hesaplar.",
         "data": {
           "environment_devices": "Ortam sensör cihazları",
           "temperature_sensors": "Sıcaklık sensörleri",
@@ -33,7 +33,7 @@
         }
       }
     },
-    "abort": {"already_configured": "Grow System Extension zaten yapılandırılmış."}
+    "abort": {"already_configured": "Hydroponic System zaten yapılandırılmış."}
   },
   "options": {
     "step": {

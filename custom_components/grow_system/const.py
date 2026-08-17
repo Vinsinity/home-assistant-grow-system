@@ -54,7 +54,7 @@ CONTROL_KEYS = (
 STORAGE_KEY = f"{DOMAIN}.profiles"
 STORAGE_VERSION = 1
 PANEL_URL = "/grow-system-static/grow-system-panel.js"
-PANEL_MODULE_URL = f"{PANEL_URL}?v=0.22.0"
+PANEL_MODULE_URL = f"{PANEL_URL}?v=0.23.0"
 PANEL_PATH = "grow-system"
 PANEL_COMPONENT = "grow-system-panel"
 

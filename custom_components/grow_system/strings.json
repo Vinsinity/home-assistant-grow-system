@@ -1,10 +1,10 @@
 {
-  "title": "Grow System Extension",
+  "title": "Hydroponic System",
   "config": {
     "step": {
       "sensors": {
         "title": "Monitoring sensors",
-        "description": "Select one or more environmental sensor devices. Grow System discovers CO2, temperature, and humidity entities below each device automatically and calculates VPD.",
+        "description": "Select one or more environmental sensor devices. Hydroponic System discovers CO2, temperature, and humidity entities below each device automatically and calculates VPD.",
         "data": {
           "environment_devices": "Environmental sensor devices",
           "temperature_sensors": "Temperature sensors",
@@ -34,7 +34,7 @@
       }
     },
     "abort": {
-      "already_configured": "Grow System Extension is already configured."
+      "already_configured": "Hydroponic System is already configured."
     }
   },
   "options": {
